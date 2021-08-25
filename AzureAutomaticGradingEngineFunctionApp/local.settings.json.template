@@ -1,0 +1,11 @@
+{
+  "IsEncrypted": false,
+  "Host": {
+    "CORS": "*"
+  },
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet",
+    "storageTestResult": "<Fill in the Connection String>"
+  }
+}

@@ -1,14 +1,130 @@
-# Project
+# Azure Automatic Grading Engine
 
-> This repo has been populated by an initial template to help get you started. Please
-> make sure to update the content to build a great experience for community-building.
+For course testing Microsoft Azure, it is hard to assess or grade Azure project manually. This project makes use of the technique of unit test to grade student's Azure project settings automatically. 
 
-As the maintainer of this project, please make a few updates:
+This project has been developed by [Cyrus Wong]( https://www.linkedin.com/in/cyruswong) [Microsoft Learn Educator Ambassador](https://docs.microsoft.com/en-us/learn/roles/educator/learn-for-educators-overview) in Association with the [Microsoft Next Generation Developer Relation Team](http://aka.ms/faculty).
 
-- Improving this README.MD file to provide a great experience
-- Updating SUPPORT.MD with content about this project's support experience
-- Understanding the security reporting process in SECURITY.MD
-- Remove this section from the README
+The project is being validated through usage on the course [Higher Diploma in Cloud and Data Centre Administration](https://www.vtc.edu.hk/admission/en/programme/it114115-higher-diploma-in-cloud-and-data-centre-administration/)
+
+## Deployment
+
+## Prerequisite
+
+- 1 Storage account with 2 containers
+- testresult and credentials with resource group name "azureautomaticgradingengine".
+
+[![Deploy To Azure](https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/deploytoazure.svg?sanitize=true)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2FAzureAutomaticGradingEngine%2Fmaster%2Fazuredeploy.json)
+
+https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2FAzureAutomaticGradingEngine%2Fmaster%2Fazuredeploy.json 
+
+Follow the following video:
+
+[![IMAGE ALT TEXT](http://img.youtube.com/vi/LClFO3OkThY/0.jpg)](https://youtu.be/LClFO3OkThY "How to deploy Azure Automatic Grading Engine")
+
+## Installation Steps
+
+1. Clone this repo.
+2. Set Publish configuration.
+3. Create assignment json.
+
+## Deploy Demo Assignment Project
+
+This is a sample example where we can validate if students have successfully deployed a Azure VNET within a Azure Resource Group called IT114115.
+
+As an educator you will need to provide fixed names for resources which you expect students to create within their Azure subscriptions.
+
+In this example we expect students to create a simple VNET ARM and a resouce group named IT114115
+https://docs.microsoft.com/en-us/azure/virtual-network/quick-create-template
+
+For the test details,
+https://github.com/microsoft/AzureAutomaticGradingEngine/blob/master/AzureAutomaticGradingEngineFunctionApp/AzureGraderTest/VnetUnitTest.cs
+
+## Supporting Environment
+
+This service is tested with [Azure for student subscription](http://aka.ms/azure4students) and follows details in relating to the use of the [Azure SDK](https://devblogs.microsoft.com/azure-sdk/authentication-and-the-azure-sdk/)
+
+## Student Tasks
+
+Student will need to create a Service principal which utilises RBAC to allow the grader to inspect their Azure Subscriptions. 
+
+Open Azure Cloud Shell and run
+
+az ad sp create-for-rbac -n "foraazuregrader" --sdk-auth
+
+Save down the result json into file.
+
+Share the json file to teacher.
+
+## Quick test with AzureGraderConsoleRunner
+
+Open \AzureGraderTestProject\AzureGraderConsoleRunner\Program.cs and change.
+
+Environment.SetEnvironmentVariable("AzureAuthFilePath", @"C:\Users\developer\Documents\azureauth.json");
+
+Build and run AzureGraderConsoleRunner.
+
+Test result will be saved in \AzureGraderTestProject\AzureGraderConsoleRunner\bin\Debug\test_result.xml
+
+## Run with Visual Studio Test Explorer
+
+Set up 2 system wide environment variables
+
+set AzureAuthFilePath=C:\Users\developer\Documents\azureauth.json
+
+Or update \repos\AzureGraderTestProject\AzureGraderTestProject\Config.cs
+
+## Scheduler Grader
+
+The scheduler is set to runs every 5 minutes by default and you can change the TimerTrigger expression.
+https://github.com/microsoft/AzureAutomaticGradingEngine/blob/master/AzureAutomaticGradingEngineFunctionApp/ScheduleGraderFunction.cs 
+
+testresult: saves Nunit xml test result.
+credentials: define assignment and class.
+
+For example, upload vnet.json into credentials.
+
+```json
+{
+  "graderUrl": "https://xxxx.azurewebsites.net/api/AzureGraderFunction",
+  "students": [
+    {
+      "email": "xxx@.edu",
+      "credentials": {
+        "activeDirectoryEndpointUrl": "https://login.microsoftonline.com",
+        "activeDirectoryGraphResourceId": "https://graph.windows.net/",
+        "clientId": "fjfjlfjl;afjlafjal'fjalds;f'",
+        "clientSecret": "lfakl;fkdf;kal;fkalfak;",
+        "galleryEndpointUrl": "https://gallery.azure.com/",
+        "managementEndpointUrl": "https://management.core.windows.net/",
+        "resourceManagerEndpointUrl": "https://management.azure.com/",
+        "sqlManagementEndpointUrl": "https://management.core.windows.net:8443/",
+        "subscriptionId": "******-******-******-********-***********",
+        "tenantId": "******-******-******-********-***********"
+      }
+    },
+    {
+      "email": "yyy@.edu",
+      "credentials": {
+        "activeDirectoryEndpointUrl": "https://login.microsoftonline.com",
+        "activeDirectoryGraphResourceId": "https://graph.windows.net/",
+        "clientId": "xsxhskjdjksjdlsdjlksjdlsjd",
+        "clientSecret": "gkjvkjv;ldjv'lvdvmdfhsdkfjsdl",
+        "galleryEndpointUrl": "https://gallery.azure.com/",
+        "managementEndpointUrl": "https://management.core.windows.net/",
+        "resourceManagerEndpointUrl": "https://management.azure.com/",
+        "sqlManagementEndpointUrl": "https://management.core.windows.net:8443/",
+        "subscriptionId": "******-******-******-********-***********",
+        "tenantId": "******-******-******-********-***********"
+      }
+    }
+  ]
+}
+
+```
+
+It defines assignment named "vnet" and the class with 2 students.
+graderUrl is the url of Azure Function running Nunit test and return xml result.
+One sample is AzureGraderFunction.cs.
 
 ## Contributing
 

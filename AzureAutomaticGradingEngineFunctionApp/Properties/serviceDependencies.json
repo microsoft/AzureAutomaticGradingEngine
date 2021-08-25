@@ -1,0 +1,22 @@
+{
+  "dependencies": {
+    "storageAzureWebJobs": {
+      "type": "storage",
+      "connectionId": "AzureWebJobsStorage"
+    },
+    "storageTestResult": {
+      "type": "storage",
+      "connectionId": "storageTestResult"
+    },
+    "appInsights": {
+      "type": "appInsights",
+      "connectionId": "APPINSIGHTS_CONNECTIONSTRING"
+    },
+    "secrets1": {
+      "type": "secrets",
+      "connectionId": "",
+      "suggestion": "true",
+      "ignored": "true"
+    }
+  }
+}
