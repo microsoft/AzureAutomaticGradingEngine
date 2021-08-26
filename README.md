@@ -39,15 +39,15 @@ This is a sample example where we can validate if students have successfully dep
 
 As an educator you will need to provide fixed names for resources which you expect students to create within their Azure subscriptions.
 
-In this example we expect students to create a simple VNET ARM and a resouce group named IT114115
-https://docs.microsoft.com/azure/virtual-network/quick-create-template
+In this example we expect students to create a simple VNET ARM and a resource group named IT114115
+Students could use a prebuilt Azure ARM Template from the [Azure Quick Start Templates Gallery](https://azure.microsoft.com/resources/templates?WT.mc_id=academic-39456-leestott) such as the [Virtual Network Quick Create Template](https://docs.microsoft.com/azure/virtual-network/quick-create-template?WT.mc_id=academic-39456-leestott)
 
 For the test details,
 https://github.com/microsoft/AzureAutomaticGradingEngine/blob/master/AzureAutomaticGradingEngineFunctionApp/AzureGraderTest/VnetUnitTest.cs
 
 ## Supporting Environment
 
-This service is tested with [Azure for student subscription](http://aka.ms/azure4students) and follows details in relating to the use of the [Azure SDK](https://devblogs.microsoft.com/azure-sdk/authentication-and-the-azure-sdk/)
+This service is tested with [Azure for student subscription](http://aka.ms/azure4students) and follows details in relating to the use of the [Azure SDK](https://devblogs.microsoft.com/azure-sdk/authentication-and-the-azure-sdk?WT.mc_id=academic-39456-leestott)
 
 ## Student Tasks
 
