@@ -58,16 +58,18 @@ To prevent typo for assignment name and and email address, use mail merge to sen
 
 https://somethingunique.azurewebsites.net/api/StudentRegistrationFunction?project=it114115&email=cywong@vtc.edu.hk
 
-## Student Tasks
-
-1. Open the link from email.
-
-2. Open Azure Cloud Shell and run
-
-az ad sp create-for-rbac -n "foraazuregrader" --sdk-auth
-
-3. Copy down the result json and submit the form.
-
+## Student Registration Steps
+[![IMAGE ALT TEXT](http://img.youtube.com/vi/t7PEhPoilLY/0.jpg)](https://youtu.be/t7PEhPoilLY "How to register your student subscription into Azure Automatic Grading Engine")
+1.	Login into your Azure Portal.
+2.	Check your Subscription ID.
+3.	Open Cloud Shell.
+4.	Change your subscription
+<code>az account set --subscription <your-subscriptions-id></code>
+5.	Check the current subscriptions.
+<code>az account show</code>
+6.	Create SDK Auth 
+<code>az ad sp create-for-rbac -n "gradingengine" --sdk-auth</code>
+7.	Submit online registration form.
 
 Remark: Subscription ID must be unique for each assignment.
 
