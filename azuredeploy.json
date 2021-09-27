@@ -2,10 +2,10 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "storageAccountName": {
+    "uniqueName": {
       "type": "string",
       "metadata": {
-        "description": "Specifies the name of the Azure Storage account."
+        "description": "Specifies the unique name of the Azure Storage account and Azure function Apps."
       }
     },
     "location": {
@@ -18,9 +18,69 @@
   },
   "resources": [
     {
+      "apiVersion": "2018-11-01",
+      "name": "[parameters('uniqueName')]",
+      "type": "Microsoft.Web/sites",
+      "kind": "functionapp",
+      "location": "[parameters('location')]",
+      "tags": {},
+      "dependsOn": [
+        "[concat('microsoft.insights/components/', parameters('uniqueName'))]",
+        "[concat('Microsoft.Storage/storageAccounts/', parameters('uniqueName'))]"
+      ],
+      "properties": {
+        "name": "[parameters('uniqueName')]",
+        "siteConfig": {
+          "appSettings": [
+            {
+              "name": "FUNCTIONS_EXTENSION_VERSION",
+              "value": "~3"
+            },
+            {
+              "name": "FUNCTIONS_WORKER_RUNTIME",
+              "value": "dotnet"
+            },
+            {
+              "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+              "value": "[reference(concat('microsoft.insights/components/',parameters('uniqueName')), '2015-05-01').InstrumentationKey]"
+            },
+            {
+              "name": "APPINSIGHTS_CONNECTIONSTRING",
+              "value": "reference(concat('microsoft.insights/components/',parameters('uniqueName')), '2015-05-01').ConnectionString]"
+            },
+            {
+              "name": "AzureWebJobsStorage",
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=',parameters('uniqueName'),';AccountKey=',listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('uniqueName')), '2019-06-01').keys[0].value,';EndpointSuffix=','core.windows.net')]"
+            },
+            {
+              "name": "storageTestResult",
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=',parameters('uniqueName'),';AccountKey=',listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('uniqueName')), '2019-06-01').keys[0].value,';EndpointSuffix=','core.windows.net')]"
+            },
+            {
+              "name": "WEBSITE_RUN_FROM_PACKAGE",
+              "value": "https://github.com/microsoft/AzureAutomaticGradingEngine/raw/master/AzureAutomaticGradingEngineFunctionApp.zip"
+            }
+          ]
+        },
+        "computeMode": "Dynamic",
+        "sku": "Dynamic"
+      }
+    },
+    {
+      "apiVersion": "2015-05-01",
+      "name": "[parameters('uniqueName')]",
+      "type": "microsoft.insights/components",
+      "location": "[parameters('location')]",
+      "tags": {},
+      "properties": {
+        "ApplicationId": "[parameters('uniqueName')]",
+        "Request_Source": "IbizaWebAppExtensionCreate"
+      }
+    },
+    {
       "type": "Microsoft.Storage/storageAccounts",
       "apiVersion": "2019-06-01",
-      "name": "[parameters('storageAccountName')]",
+      "name": "[parameters('uniqueName')]",
       "location": "[parameters('location')]",
       "sku": {
         "name": "Standard_LRS",
@@ -28,7 +88,8 @@
       },
       "kind": "StorageV2",
       "properties": {
-        "accessTier": "Hot"
+        "accessTier": "Hot",
+        "supportsHttpsTrafficOnly": true
       },
       "resources": [
         {
@@ -36,7 +97,7 @@
           "apiVersion": "2019-06-01",
           "name": "default/credentials",
           "dependsOn": [
-            "[parameters('storageAccountName')]"
+            "[parameters('uniqueName')]"
           ]
         },
         {
@@ -44,7 +105,31 @@
           "apiVersion": "2019-06-01",
           "name": "default/testresult",
           "dependsOn": [
-            "[parameters('storageAccountName')]"
+            "[parameters('uniqueName')]"
+          ]
+        },
+        {
+          "type": "tableServices/tables",
+          "apiVersion": "2021-04-01",
+          "name": "default/assignments",
+          "dependsOn": [
+            "[parameters('uniqueName')]"
+          ]
+        },
+        {
+          "type": "tableServices/tables",
+          "apiVersion": "2021-04-01",
+          "name": "default/credentials",
+          "dependsOn": [
+            "[parameters('uniqueName')]"
+          ]
+        },
+        {
+          "type": "tableServices/tables",
+          "apiVersion": "2021-04-01",
+          "name": "default/subscriptions",
+          "dependsOn": [
+            "[parameters('uniqueName')]"
           ]
         }
       ]
