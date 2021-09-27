@@ -56,7 +56,7 @@ Properties - "GraderUrl":  The grader HTTP Url
 
 To prevent typo for assignment name and and email address, use mail merge to send the link to students.
 
-https://it114115deployment.azurewebsites.net/api/StudentRegistrationFunction?project=it114115&email=cywong@vtc.edu.hk
+https://somethingunique.azurewebsites.net/api/StudentRegistrationFunction?project=it114115&email=cywong@vtc.edu.hk
 
 ## Student Tasks
 
@@ -96,7 +96,7 @@ https://github.com/microsoft/AzureAutomaticGradingEngine/blob/master/AzureAutoma
 
 testresult: saves Nunit xml test result.
 
-# Generate the Prebuilt package
+## Generate the Prebuilt package
 
 Get the latest zip package
 AzureAutomaticGradingEngine\AzureAutomaticGradingEngineFunctionApp\obj\Release\netcoreapp3.1\PubTmp 
