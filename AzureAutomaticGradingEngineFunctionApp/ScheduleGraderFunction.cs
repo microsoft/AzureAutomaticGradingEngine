@@ -15,6 +15,8 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Azure.WebJobs.Extensions.Http;
 
 namespace AzureAutomaticGradingEngineFunctionApp
 {
@@ -29,13 +31,14 @@ namespace AzureAutomaticGradingEngineFunctionApp
 
             Console.WriteLine(assignments.Count());
             var tasks = new Task<string>[assignments.Count()];
-            for (int i = 0; i < assignments.Count(); i++)
+            for (var i = 0; i < assignments.Count(); i++)
             {
                 tasks[i] = context.CallActivityAsync<string>(
                     "GradeAssignment",
                     assignments[i]);
             }
             await Task.WhenAll(tasks);
+            Console.WriteLine("Completed!");
         }
 
         public class Assignment
@@ -56,9 +59,9 @@ namespace AzureAutomaticGradingEngineFunctionApp
         {
             CloudStorageAccount storageAccount = CloudStorage.GetCloudStorageAccount(executionContext);
 
-            CloudTableClient tblclient = storageAccount.CreateCloudTableClient();
-            CloudTable assignmentsTable = tblclient.GetTableReference("assignments");
-            CloudTable credentialsTable = tblclient.GetTableReference("credentials");
+            CloudTableClient cloudTableClient = storageAccount.CreateCloudTableClient();
+            CloudTable assignmentsTable = cloudTableClient.GetTableReference("assignments");
+            CloudTable credentialsTable = cloudTableClient.GetTableReference("credentials");
 
             TableContinuationToken token = null;
             var assignments = new List<DynamicTableEntity>();
@@ -78,7 +81,8 @@ namespace AzureAutomaticGradingEngineFunctionApp
                 var studentDynamic = new List<DynamicTableEntity>();
                 do
                 {
-                    var queryResult = await credentialsTable.ExecuteQuerySegmentedAsync(new TableQuery().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, project)), token);
+                    var queryResult = await credentialsTable.ExecuteQuerySegmentedAsync(
+                        new TableQuery().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, project)), token);
                     studentDynamic.AddRange(queryResult.Results);
                     token = queryResult.ContinuationToken;
                 } while (token != null);
@@ -111,21 +115,20 @@ ILogger log)
             CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
             CloudBlobContainer container = blobClient.GetContainerReference("testresult");
 
-            Console.WriteLine(assignment.Name);
-
             string graderUrl = assignment.Context.GraderUrl;
             dynamic students = JsonConvert.DeserializeObject(assignment.Context.Students);
 
             var tasks = new List<Task>();
+            Console.WriteLine(assignment.Name + ":" + students.Count);
             foreach (dynamic student in students)
             {
                 var task = RunAndSaveTestResult(assignment, container, graderUrl, student);
                 tasks.Add(task);
             }
-            await Task.WhenAll();
+            await Task.WhenAll(tasks);
         }
 
-        private static async Task<string> RunAndSaveTestResult(Assignment assignment, CloudBlobContainer container, string graderUrl, dynamic student)
+        private static async Task RunAndSaveTestResult(Assignment assignment, CloudBlobContainer container, string graderUrl, dynamic student)
         {
             var client = new HttpClient();
             var queryPair = new NameValueCollection
@@ -133,10 +136,15 @@ ILogger log)
                 { "credentials", student.credentials.ToString() }
             };
             var uri = new Uri(graderUrl + ToQueryString(queryPair));
-            Console.WriteLine(uri);
-            var xml = await client.GetStringAsync(uri);
-            await SaveTestResult(container, assignment.Name, student.email.ToString(), xml);
-            return xml;
+            try
+            {
+                var xml = await client.GetStringAsync(uri);
+                await SaveTestResult(container, assignment.Name, student.email.ToString(), xml);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+            }
         }
 
         private static string ToQueryString(NameValueCollection nvc)
@@ -144,24 +152,22 @@ ILogger log)
             var array = (
                 from key in nvc.AllKeys
                 from value in nvc.GetValues(key)
-                select string.Format(
-            "{0}={1}",
-            HttpUtility.UrlEncode(key),
-            HttpUtility.UrlEncode(value))
-                ).ToArray();
+                select $"{HttpUtility.UrlEncode(key)}={HttpUtility.UrlEncode(value)}"
+            ).ToArray();
             return "?" + string.Join("&", array);
         }
 
         private static async Task SaveTestResult(CloudBlobContainer container, string assignment, string email, string xml)
         {
-            var prefix = string.Format(CultureInfo.InvariantCulture, assignment + "/" + email + "/{0:yyyy/MM/dd/HH/mm/}", DateTime.Now);
+            var blobName = string.Format(CultureInfo.InvariantCulture, assignment + "/" + email + "/{0:yyyy/MM/dd/HH/mm/}/TestResult.xml", DateTime.Now);
+            Console.WriteLine(blobName);
 
-            CloudBlockBlob blob = container.GetBlockBlobReference(prefix + "TestResult.xml");
+            CloudBlockBlob blob = container.GetBlockBlobReference(blobName);
             blob.Properties.ContentType = "application/xml";
             using var ms = new MemoryStream();
-            using StreamWriter writer = new StreamWriter(ms);
-            writer.Write(xml);
-            writer.Flush();
+            using var writer = new StreamWriter(ms);
+            await writer.WriteAsync(xml);
+            await writer.FlushAsync();
             ms.Position = 0;
             await blob.UploadFromStreamAsync(ms);
         }
@@ -179,6 +185,16 @@ ILogger log)
             }
             string instanceId = await starter.StartNewAsync("ScheduleGraderFunction", null);
 
+            log.LogInformation($"Started orchestration with ID = '{instanceId}'.");
+        }
+
+        [FunctionName("ManualGrader")]
+        public static async Task ManualGrader(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = null)] HttpRequest req, ILogger log, ExecutionContext context,
+            [DurableClient] IDurableOrchestrationClient starter
+           )
+        {
+            string instanceId = await starter.StartNewAsync("ScheduleGraderFunction", null);
             log.LogInformation($"Started orchestration with ID = '{instanceId}'.");
         }
     }

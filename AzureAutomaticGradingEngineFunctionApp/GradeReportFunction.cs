@@ -29,6 +29,7 @@ namespace AzureGraderFunctionApp
             log.LogInformation("C# HTTP trigger function processed a request.");
 
             string assignment = req.Query["assignment"];
+            bool isJson = req.Query.ContainsKey("json");
 
             CloudStorageAccount storageAccount = CloudStorage.GetCloudStorageAccount(context);
             CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
@@ -56,39 +57,38 @@ namespace AzureGraderFunctionApp
                      return acc;
                  }
              });
+                
 
+            if (isJson)
+            {
+                return new JsonResult(accumulateMarks);
+            }
 
-            string jsonString = JsonSerializer.Serialize(accumulateMarks);
-            log.LogInformation(jsonString);
             string contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
             try
             {
-                using (var workbook = new XLWorkbook())
-                {
-                    GenerateMarksheet(accumulateMarks, workbook);
-                    var stream = new MemoryStream();
-                    workbook.SaveAs(stream);
-                    var content = stream.ToArray();
-                    return new FileContentResult(content, contentType);
-                }
+                using var workbook = new XLWorkbook();
+                GenerateMarksheet(accumulateMarks, workbook);
+                var stream = new MemoryStream();
+                workbook.SaveAs(stream);
+                var content = stream.ToArray();
+                return new FileContentResult(content, contentType);
             }
             catch (Exception ex)
             {
                 return new OkObjectResult(ex);
-            }
-
-            //return new OkObjectResult(jsonString);
+            }            
         }
 
         private static void GenerateMarksheet(Dictionary<string, Dictionary<string, int>> accumulateMarks, XLWorkbook workbook)
         {
-            IXLWorksheet worksheet =
+            var worksheet =
             workbook.Worksheets.Add("Marks");
             worksheet.Cell(1, 1).Value = "Email";
             worksheet.Cell(1, 2).Value = "Total";
 
             var tests = new HashSet<string>();
-            for (int i = 0; i < accumulateMarks.Count(); i++)
+            for (var i = 0; i < accumulateMarks.Count(); i++)
             {
                 var student = accumulateMarks.ElementAt(i);
                 worksheet.Cell(i + 2, 1).Value = student.Key;
@@ -97,11 +97,11 @@ namespace AzureGraderFunctionApp
             }
             var testList = tests.ToList();
             testList.Sort();
-            for (int j = 0; j < testList.Count(); j++)
+            for (var j = 0; j < testList.Count(); j++)
             {
                 var testName = testList.ElementAt(j);
                 worksheet.Cell(1, j + 3).Value = testName;
-                for (int i = 0; i < accumulateMarks.Count(); i++)
+                for (var i = 0; i < accumulateMarks.Count(); i++)
                 {
                     var student = accumulateMarks.ElementAt(i);
                     worksheet.Cell(i + 2, j + 3).Value = student.Value.GetValueOrDefault(testName, 0);
