@@ -1,22 +1,23 @@
 using AzureGraderFunctionApp;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.DurableTask;
-using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.WindowsAzure.Storage.Table;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Azure.WebJobs.Extensions.Http;
 
 namespace AzureAutomaticGradingEngineFunctionApp
 {
@@ -24,31 +25,21 @@ namespace AzureAutomaticGradingEngineFunctionApp
     {
 
         [FunctionName("ScheduleGraderFunction")]
-        public static async Task<List<string>> RunOrchestrator(
+        public static async Task RunOrchestrator(
             [OrchestrationTrigger] IDurableOrchestrationContext context, ILogger log)
         {
-
             var assignments = await context.CallActivityAsync<List<Assignment>>("GetAssignmentList", null);
 
-            var outputs = new List<string>();
             Console.WriteLine(assignments.Count());
             var tasks = new Task<string>[assignments.Count()];
-            for (int i = 0; i < assignments.Count(); i++)
+            for (var i = 0; i < assignments.Count(); i++)
             {
                 tasks[i] = context.CallActivityAsync<string>(
                     "GradeAssignment",
                     assignments[i]);
             }
-
             await Task.WhenAll(tasks);
-
-            // Replace "hello" with the name of your Durable Activity Function.
-            //outputs.Add(await context.CallActivityAsync<string>("Hello", "Tokyo"));
-            //outputs.Add(await context.CallActivityAsync<string>("Hello", "Seattle"));
-            //outputs.Add(await context.CallActivityAsync<string>("Hello", "London"));
-
-            // returns ["Hello Tokyo!", "Hello Seattle!", "Hello London!"]
-            return outputs;
+            Console.WriteLine("Completed!");
         }
 
         public class Assignment
@@ -68,33 +59,53 @@ namespace AzureAutomaticGradingEngineFunctionApp
     ILogger log)
         {
             CloudStorageAccount storageAccount = CloudStorage.GetCloudStorageAccount(executionContext);
-            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
-            CloudBlobContainer container = blobClient.GetContainerReference("credentials");
 
-            var blobItems = await CloudStorage.ListBlobsFlatListing(container, null, log);
-            //https://graderesult.blob.core.windows.net/credentials/vnet
-            var assignments = blobItems.Select(c => new Assignment
+            CloudTableClient cloudTableClient = storageAccount.CreateCloudTableClient();
+            CloudTable assignmentsTable = cloudTableClient.GetTableReference("assignments");
+            CloudTable credentialsTable = cloudTableClient.GetTableReference("credentials");
+
+            TableContinuationToken token = null;
+            var assignments = new List<DynamicTableEntity>();
+            do
             {
-                Name = c.Uri.ToString().Replace(".json", "").Split("/credentials/")[1],
-                Context = GetAssignmentContext(container, c)
-            });
+                var queryResult = await assignmentsTable.ExecuteQuerySegmentedAsync(new TableQuery(), token);
+                assignments.AddRange(queryResult.Results);
+                token = queryResult.ContinuationToken;
+            } while (token != null);
+
+            var results = new List<Assignment>();
+            foreach (var assignment in assignments)
+            {
+                string graderUrl = assignment.Properties["GraderUrl"].StringValue;
+                string project = assignment.PartitionKey;
+
+                var studentDynamic = new List<DynamicTableEntity>();
+                do
+                {
+                    var queryResult = await credentialsTable.ExecuteQuerySegmentedAsync(
+                        new TableQuery().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, project)), token);
+                    studentDynamic.AddRange(queryResult.Results);
+                    token = queryResult.ContinuationToken;
+                } while (token != null);
 
 
-            return assignments.ToList();
+                var students = studentDynamic.Select(c => new
+                {
+                    email = c.RowKey,
+                    credentials = c.Properties["Credentials"].StringValue
+                }).ToArray();
+
+
+                results.Add(new Assignment
+                {
+                    Name = project,
+                    Context = new ClassContext() { GraderUrl = graderUrl, Students = JsonConvert.SerializeObject(students) }
+                });
+
+            }
+            return results;
         }
 
-        private static ClassContext GetAssignmentContext(CloudBlobContainer cloudBlobContainer, IListBlobItem item)
-        {
-            var blobName = item.Uri.ToString().Substring(cloudBlobContainer.Uri.ToString().Length + 1);
-            CloudBlockBlob blob = cloudBlobContainer.GetBlockBlobReference(blobName);
-
-            string rawJson = blob.DownloadTextAsync().Result;
-            dynamic studentContext = JsonConvert.DeserializeObject(rawJson);
-
-            var classContext = new ClassContext() { GraderUrl = studentContext.graderUrl, Students = studentContext.students.ToString() };
-
-            return classContext;
-        }
 
         [FunctionName("GradeAssignment")]
         public static async Task GradeAssignment([ActivityTrigger] Assignment assignment, ExecutionContext context,
@@ -105,32 +116,40 @@ ILogger log)
             CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
             CloudBlobContainer container = blobClient.GetContainerReference("testresult");
 
-            var blobItems = await CloudStorage.ListBlobsFlatListing(container, assignment.Name, log);
-
-            Console.WriteLine(assignment.Name);
-
             string graderUrl = assignment.Context.GraderUrl;
             dynamic students = JsonConvert.DeserializeObject(assignment.Context.Students);
 
-            var tasks = new List<Task>();
+            Console.WriteLine(assignment.Name + ":" + students.Count);
             foreach (dynamic student in students)
             {
-                var task = RunAndSaveTestResult(assignment, container, graderUrl, student);
-                tasks.Add(task);
+                //TODO: Back to parallel call when found the solution to run Nunit test in parallel in Azure Function.
+                await RunAndSaveTestResult(assignment, container, graderUrl, student);
             }
-            await Task.WhenAll();       
         }
 
-        private static async Task<string> RunAndSaveTestResult(Assignment assignment, CloudBlobContainer container, string graderUrl, dynamic student)
-        {  
+        private static async Task RunAndSaveTestResult(Assignment assignment, CloudBlobContainer container, string graderUrl, dynamic student)
+        {
             var client = new HttpClient();
-            var queryPair = new NameValueCollection();            
-            queryPair.Add("credentials", student.credentials.ToString());
+            client.Timeout = TimeSpan.FromMinutes(3);
+            var queryPair = new NameValueCollection();
+            queryPair.Set("credentials", student.credentials.ToString());
+            queryPair.Set("trace", student.email.ToString());
+
             var uri = new Uri(graderUrl + ToQueryString(queryPair));
-            Console.WriteLine(uri);
-            var xml = await client.GetStringAsync(uri);          
-            await SaveTestResult(container, assignment.Name, student.email.ToString(), xml);
-            return xml;
+            try
+            {
+                var watch = System.Diagnostics.Stopwatch.StartNew();
+                var xml = await client.GetStringAsync(uri);
+                await SaveTestResult(container, assignment.Name, student.email.ToString(), xml);
+                watch.Stop();
+                var elapsedMs = watch.ElapsedMilliseconds;
+                Console.WriteLine(student.email + " get test result in " + elapsedMs + "ms.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(student.email + " in error.");
+                Console.WriteLine(ex);
+            }
         }
 
         private static string ToQueryString(NameValueCollection nvc)
@@ -138,36 +157,31 @@ ILogger log)
             var array = (
                 from key in nvc.AllKeys
                 from value in nvc.GetValues(key)
-                select string.Format(
-            "{0}={1}",
-            HttpUtility.UrlEncode(key),
-            HttpUtility.UrlEncode(value))
-                ).ToArray();
+                select $"{HttpUtility.UrlEncode(key)}={HttpUtility.UrlEncode(value)}"
+            ).ToArray();
             return "?" + string.Join("&", array);
         }
 
         private static async Task SaveTestResult(CloudBlobContainer container, string assignment, string email, string xml)
         {
-            var prefix = string.Format(CultureInfo.InvariantCulture, assignment + "/" + email + "/{0:yyyy/MM/dd/HH/mm/}", DateTime.Now);
+            var filename = Regex.Replace(email, @"[^0-9a-zA-Z]+", "");
+            var blobName = string.Format(CultureInfo.InvariantCulture, assignment + "/" + email + "/{0:yyyy/MM/dd/HH/mm}/" + filename + ".xml", DateTime.Now);
+            Console.WriteLine(blobName);
 
-            CloudBlockBlob blob = container.GetBlockBlobReference(prefix + "TestResult.xml");
+            CloudBlockBlob blob = container.GetBlockBlobReference(blobName);
             blob.Properties.ContentType = "application/xml";
-            using (var ms = new MemoryStream())
-            {
-                using (StreamWriter writer = new StreamWriter(ms))
-                {                   
-                    writer.Write(xml);
-                    writer.Flush();
-                    ms.Position = 0;
-                    await blob.UploadFromStreamAsync(ms);
-                }           
-            }
+            using var ms = new MemoryStream();
+            using var writer = new StreamWriter(ms);
+            await writer.WriteAsync(xml);
+            await writer.FlushAsync();
+            ms.Position = 0;
+            await blob.UploadFromStreamAsync(ms);
         }
 
 
         [FunctionName("ScheduleGrader")]
         public static async Task ScheduleGrader(
-            [TimerTrigger("0 */5 * * * *")] TimerInfo myTimer,
+            [TimerTrigger("0 */60 * * * *")] TimerInfo myTimer,
             [DurableClient] IDurableOrchestrationClient starter,
             ILogger log)
         {
@@ -177,7 +191,17 @@ ILogger log)
             }
             string instanceId = await starter.StartNewAsync("ScheduleGraderFunction", null);
 
-            log.LogInformation($"Started orchestration with ID = '{instanceId}'.");           
+            log.LogInformation($"Started orchestration with ID = '{instanceId}'.");
+        }
+
+        [FunctionName("ManualGrader")]
+        public static async Task ManualGrader(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = null)] HttpRequest req, ILogger log, ExecutionContext context,
+            [DurableClient] IDurableOrchestrationClient starter
+           )
+        {
+            string instanceId = await starter.StartNewAsync("ScheduleGraderFunction", null);
+            log.LogInformation($"Started orchestration with ID = '{instanceId}'.");
         }
     }
 }

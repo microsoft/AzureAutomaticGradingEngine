@@ -16,6 +16,9 @@ The project is being validated through usage on the course [Higher Diploma in Cl
 You can read more about this project at [Microsoft Educator Developer TechCommunity](https://techcommunity.microsoft.com/t5/educator-developer-blog/microsoft-azure-automatic-grading-engine/ba-p/2681809?WT.mc_id=academic-39457-leestott)
 ## Prerequisite
 
+
+[![Deploy To Azure](https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/deploytoazure.svg?sanitize=true)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2FAzureAutomaticGradingEngine%2Fmain%2Fazuredeploy.json)
+=======
 - 1 Storage account with 2 containers
 - testresult and credentials with resource group name "azureautomaticgradingengine".
 
@@ -23,15 +26,12 @@ You can read more about this project at [Microsoft Educator Developer TechCommun
 
 https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2FAzureAutomaticGradingEngine%2Fmain%2Fazuredeploy.json 
 
-Follow the following video:
+[![IMAGE ALT TEXT](http://img.youtube.com/vi/tf4GnPIrDuI/0.jpg)](https://youtu.be/tf4GnPIrDuI "How to deploy Azure Automatic Grading Engine with ARM.")
 
-[![IMAGE ALT TEXT](http://img.youtube.com/vi/LClFO3OkThY/0.jpg)](https://youtu.be/LClFO3OkThY "How to deploy Azure Automatic Grading Engine")
+Please skip the setup section as the latest ARM can help you deploy eveything! but this old video teach you how to rebuild and deploy own your test.
 
-## Installation Steps
+[![IMAGE ALT TEXT](http://img.youtube.com/vi/LClFO3OkThY/0.jpg)](https://youtu.be/LClFO3OkThY "How to deploy Azure Automatic Grading Engine without ARM.")
 
-1. Clone this repo.
-2. Set Publish configuration.
-3. Create assignment json.
 
 ## Deploy Demo Assignment Project
 
@@ -49,17 +49,38 @@ https://github.com/microsoft/AzureAutomaticGradingEngine/blob/master/AzureAutoma
 
 This service is tested with [Azure for student subscription](http://aka.ms/azure4students) and follows details in relating to the use of the [Azure SDK](https://devblogs.microsoft.com/azure-sdk/authentication-and-the-azure-sdk?WT.mc_id=academic-39456-leestott)
 
-## Student Tasks
+# How to define a Project Assignment?
 
-Student will need to create a Service principal which utilises RBAC to allow the grader to inspect their Azure Subscriptions. 
+## Define a project or assignment
 
-Open Azure Cloud Shell and run
+You need to add a Entity in assignments table.
+Partition Key: assignment or project name such as it114115
+Properties - "GraderUrl":  The grader HTTP Url
+![Assignment](./images/AssignmentTableRecord.png)
 
-az ad sp create-for-rbac -n "foraazuregrader" --sdk-auth
+# Email Registeration Link to your student.
+[![IMAGE ALT TEXT](http://img.youtube.com/vi/CXc7fx6nNJk/0.jpg)](https://youtu.be/CXc7fx6nNJk "How to mail merge registration information to your students?")
 
-Save down the result json into file.
+To prevent the typo of assignment name and email address, please use mail merge to send the link to students.
 
-Share the json file to teacher.
+You can get the sample mail merge template /MailMerge
+
+https://somethingunique.azurewebsites.net/api/StudentRegistrationFunction?project=it114115&email=cywong@vtc.edu.hk
+
+## Student Registration Steps
+[![IMAGE ALT TEXT](http://img.youtube.com/vi/t7PEhPoilLY/0.jpg)](https://youtu.be/t7PEhPoilLY "How to register your student subscription into Azure Automatic Grading Engine")
+1.	Login into your Azure Portal.
+2.	Check your Subscription ID.
+3.	Open Cloud Shell.
+4.	Change your subscription
+<code>az account set --subscription <your-subscriptions-id></code>
+5.	Check the current subscriptions.
+<code>az account show</code>
+6.	Create SDK Auth 
+<code>az ad sp create-for-rbac -n "gradingengine" --sdk-auth</code>
+7.	Submit online registration form.
+
+Remark: Subscription ID must be unique for each assignment.
 
 ## Quick test with AzureGraderConsoleRunner
 
@@ -85,52 +106,11 @@ The scheduler is set to runs every 5 minutes by default and you can change the T
 https://github.com/microsoft/AzureAutomaticGradingEngine/blob/master/AzureAutomaticGradingEngineFunctionApp/ScheduleGraderFunction.cs 
 
 testresult: saves Nunit xml test result.
-credentials: define assignment and class.
 
-For example, upload vnet.json into credentials.
+## Generate the Prebuilt package
 
-```json
-{
-  "graderUrl": "https://xxxx.azurewebsites.net/api/AzureGraderFunction",
-  "students": [
-    {
-      "email": "xxx@.edu",
-      "credentials": {
-        "activeDirectoryEndpointUrl": "https://login.microsoftonline.com",
-        "activeDirectoryGraphResourceId": "https://graph.windows.net/",
-        "clientId": "fjfjlfjl;afjlafjal'fjalds;f'",
-        "clientSecret": "lfakl;fkdf;kal;fkalfak;",
-        "galleryEndpointUrl": "https://gallery.azure.com/",
-        "managementEndpointUrl": "https://management.core.windows.net/",
-        "resourceManagerEndpointUrl": "https://management.azure.com/",
-        "sqlManagementEndpointUrl": "https://management.core.windows.net:8443/",
-        "subscriptionId": "******-******-******-********-***********",
-        "tenantId": "******-******-******-********-***********"
-      }
-    },
-    {
-      "email": "yyy@.edu",
-      "credentials": {
-        "activeDirectoryEndpointUrl": "https://login.microsoftonline.com",
-        "activeDirectoryGraphResourceId": "https://graph.windows.net/",
-        "clientId": "xsxhskjdjksjdlsdjlksjdlsjd",
-        "clientSecret": "gkjvkjv;ldjv'lvdvmdfhsdkfjsdl",
-        "galleryEndpointUrl": "https://gallery.azure.com/",
-        "managementEndpointUrl": "https://management.core.windows.net/",
-        "resourceManagerEndpointUrl": "https://management.azure.com/",
-        "sqlManagementEndpointUrl": "https://management.core.windows.net:8443/",
-        "subscriptionId": "******-******-******-********-***********",
-        "tenantId": "******-******-******-********-***********"
-      }
-    }
-  ]
-}
-
-```
-
-It defines assignment named "vnet" and the class with 2 students.
-graderUrl is the url of Azure Function running Nunit test and return xml result.
-One sample is AzureGraderFunction.cs.
+Get the latest zip package
+AzureAutomaticGradingEngine\AzureAutomaticGradingEngineFunctionApp\obj\Release\netcoreapp3.1\PubTmp 
 
 ## Contributing
 

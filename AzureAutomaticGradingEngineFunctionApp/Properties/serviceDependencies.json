@@ -1,9 +1,5 @@
 {
   "dependencies": {
-    "storageAzureWebJobs": {
-      "type": "storage",
-      "connectionId": "AzureWebJobsStorage"
-    },
     "storageTestResult": {
       "type": "storage",
       "connectionId": "storageTestResult"
@@ -17,6 +13,10 @@
       "connectionId": "",
       "suggestion": "true",
       "ignored": "true"
+    },
+    "storageAzureWebJobs": {
+      "type": "storage",
+      "connectionId": "AzureWebJobsStorage"
     }
   }
 }
