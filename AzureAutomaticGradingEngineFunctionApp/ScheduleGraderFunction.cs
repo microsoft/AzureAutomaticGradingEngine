@@ -13,6 +13,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web;
 using Microsoft.AspNetCore.Http;
@@ -131,18 +132,24 @@ ILogger log)
         private static async Task RunAndSaveTestResult(Assignment assignment, CloudBlobContainer container, string graderUrl, dynamic student)
         {
             var client = new HttpClient();
-            var queryPair = new NameValueCollection
-            {
-                { "credentials", student.credentials.ToString() }
-            };
+            client.Timeout = TimeSpan.FromMinutes(3);
+            var queryPair = new NameValueCollection();
+            queryPair.Set("credentials", student.credentials.ToString());
+            queryPair.Set("trace", student.email.ToString());
+
             var uri = new Uri(graderUrl + ToQueryString(queryPair));
             try
             {
+                var watch = System.Diagnostics.Stopwatch.StartNew();
                 var xml = await client.GetStringAsync(uri);
                 await SaveTestResult(container, assignment.Name, student.email.ToString(), xml);
+                watch.Stop();
+                var elapsedMs = watch.ElapsedMilliseconds;
+                Console.WriteLine(student.email + " get test result in  " + elapsedMs + "ms.");
             }
             catch (Exception ex)
             {
+                Console.WriteLine(student.email + " in error.");
                 Console.WriteLine(ex);
             }
         }
@@ -159,7 +166,8 @@ ILogger log)
 
         private static async Task SaveTestResult(CloudBlobContainer container, string assignment, string email, string xml)
         {
-            var blobName = string.Format(CultureInfo.InvariantCulture, assignment + "/" + email + "/{0:yyyy/MM/dd/HH/mm/}/TestResult.xml", DateTime.Now);
+            var filename = Regex.Replace(email, @"[^0-9a-zA-Z]+", "");
+            var blobName = string.Format(CultureInfo.InvariantCulture, assignment + "/" + email + "/{0:yyyy/MM/dd/HH/mm}/" + filename + ".xml", DateTime.Now);
             Console.WriteLine(blobName);
 
             CloudBlockBlob blob = container.GetBlockBlobReference(blobName);
