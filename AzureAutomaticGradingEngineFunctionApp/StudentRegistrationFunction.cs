@@ -10,25 +10,41 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
 using System.Collections.Generic;
+using System.IO;
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Json;
+using System.Text;
 using AzureAutomaticGradingEngineFunctionApp;
+using Microsoft.ApplicationInsights;
+using Newtonsoft.Json;
 
 namespace AzureGraderFunctionApp
 {
     public static class StudentRegistrationFunction
     {
-
+        [DataContract]
         class Confidential
         {
-            public string clientId;
-            public string clientSecret;
-            public string subscriptionId;
-            public string tenantId;
-            public string activeDirectoryEndpointUrl;
-            public string resourceManagerEndpointUrl;
-            public string activeDirectoryGraphResourceId;
-            public string sqlManagementEndpointUrl;
-            public string galleryEndpointUrl;
-            public string managementEndpointUrl;
+            [DataMember] public string clientId;
+            [DataMember] public string clientSecret;
+            [DataMember] public string subscriptionId;
+            [DataMember] public string tenantId;
+            [DataMember] public string activeDirectoryEndpointUrl;
+            [DataMember] public string resourceManagerEndpointUrl;
+            [DataMember] public string activeDirectoryGraphResourceId;
+            [DataMember] public string sqlManagementEndpointUrl;
+            [DataMember] public string galleryEndpointUrl;
+            [DataMember] public string managementEndpointUrl;
+        }
+
+        static Confidential ReadToObject(string json)
+        {
+            var deserializedUser = new Confidential();
+            var ms = new MemoryStream(Encoding.UTF8.GetBytes(json));
+            var ser = new DataContractJsonSerializer(deserializedUser.GetType());
+            deserializedUser = ser.ReadObject(ms) as Confidential;
+            ms.Close();
+            return deserializedUser;
         }
 
         [FunctionName("StudentRegistrationFunction")]
@@ -118,7 +134,7 @@ namespace AzureGraderFunctionApp
                 CloudTable credentialsTable = tblclient.GetTableReference("credentials");
                 CloudTable subscriptionTable = tblclient.GetTableReference("subscriptions");
 
-                var credential = Newtonsoft.Json.JsonConvert.DeserializeObject<Confidential>(credentials);
+                var credential = ReadToObject(credentials);
                 string subscriptionId = credential.subscriptionId;
 
                 TableResult result = await subscriptionTable.ExecuteAsync(TableOperation.Retrieve(project, subscriptionId, new List<string>() { "Email" }));

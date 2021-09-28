@@ -119,14 +119,12 @@ ILogger log)
             string graderUrl = assignment.Context.GraderUrl;
             dynamic students = JsonConvert.DeserializeObject(assignment.Context.Students);
 
-            var tasks = new List<Task>();
             Console.WriteLine(assignment.Name + ":" + students.Count);
             foreach (dynamic student in students)
             {
-                var task = RunAndSaveTestResult(assignment, container, graderUrl, student);
-                tasks.Add(task);
+                //TODO: Back to parallel call when found the solution to run Nunit test in parallel in Azure Function.
+                await RunAndSaveTestResult(assignment, container, graderUrl, student);
             }
-            await Task.WhenAll(tasks);
         }
 
         private static async Task RunAndSaveTestResult(Assignment assignment, CloudBlobContainer container, string graderUrl, dynamic student)
@@ -145,7 +143,7 @@ ILogger log)
                 await SaveTestResult(container, assignment.Name, student.email.ToString(), xml);
                 watch.Stop();
                 var elapsedMs = watch.ElapsedMilliseconds;
-                Console.WriteLine(student.email + " get test result in  " + elapsedMs + "ms.");
+                Console.WriteLine(student.email + " get test result in " + elapsedMs + "ms.");
             }
             catch (Exception ex)
             {
@@ -183,7 +181,7 @@ ILogger log)
 
         [FunctionName("ScheduleGrader")]
         public static async Task ScheduleGrader(
-            [TimerTrigger("0 */15 * * * *")] TimerInfo myTimer,
+            [TimerTrigger("0 */60 * * * *")] TimerInfo myTimer,
             [DurableClient] IDurableOrchestrationClient starter,
             ILogger log)
         {
