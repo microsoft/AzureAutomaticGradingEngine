@@ -17,6 +17,19 @@ namespace AzureGraderFunctionApp
     public static class StudentRegistrationFunction
     {
 
+        class Confidential
+        {
+            public string clientId;
+            public string clientSecret;
+            public string subscriptionId;
+            public string tenantId;
+            public string activeDirectoryEndpointUrl;
+            public string resourceManagerEndpointUrl;
+            public string activeDirectoryGraphResourceId;
+            public string sqlManagementEndpointUrl;
+            public string galleryEndpointUrl;
+            public string managementEndpointUrl;
+        }
 
         [FunctionName("StudentRegistrationFunction")]
         public static async Task<IActionResult> Run(
@@ -105,8 +118,8 @@ namespace AzureGraderFunctionApp
                 CloudTable credentialsTable = tblclient.GetTableReference("credentials");
                 CloudTable subscriptionTable = tblclient.GetTableReference("subscriptions");
 
-                var credentialObject = Newtonsoft.Json.JsonConvert.DeserializeObject<dynamic>(credentials);
-                string subscriptionId = credentialObject.subscriptionId;
+                var credential = Newtonsoft.Json.JsonConvert.DeserializeObject<Confidential>(credentials);
+                string subscriptionId = credential.subscriptionId;
 
                 TableResult result = await subscriptionTable.ExecuteAsync(TableOperation.Retrieve(project, subscriptionId, new List<string>() { "Email" }));
 

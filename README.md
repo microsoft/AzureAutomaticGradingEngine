@@ -53,8 +53,11 @@ Properties - "GraderUrl":  The grader HTTP Url
 ![Assignment](./images/AssignmentTableRecord.png)
 
 # Email Registeration Link to your student.
+[![IMAGE ALT TEXT](http://img.youtube.com/vi/CXc7fx6nNJk/0.jpg)](https://youtu.be/CXc7fx6nNJk "How to mail merge registration information to your students?")
 
-To prevent typo for assignment name and and email address, use mail merge to send the link to students.
+To prevent the typo of assignment name and email address, please use mail merge to send the link to students.
+
+You can get the sample mail merge template /MailMerge
 
 https://somethingunique.azurewebsites.net/api/StudentRegistrationFunction?project=it114115&email=cywong@vtc.edu.hk
 
