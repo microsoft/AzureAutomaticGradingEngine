@@ -58,7 +58,7 @@
             },
             {
               "name": "WEBSITE_RUN_FROM_PACKAGE",
-              "value": "https://github.com/microsoft/AzureAutomaticGradingEngine/raw/master/Prebuilt/AzureAutomaticGradingEngineFunctionApp.zip"
+              "value": "https://github.com/microsoft/AzureAutomaticGradingEngine/raw/main/Prebuilt/AzureAutomaticGradingEngineFunctionApp.zip"
             }
           ]
         },
