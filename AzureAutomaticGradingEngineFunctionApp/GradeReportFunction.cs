@@ -7,13 +7,11 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
-
-using Azure;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Xml;
-using System.Text.Json;
 using ClosedXML.Excel;
 using System.IO;
 
@@ -30,35 +28,10 @@ namespace AzureGraderFunctionApp
 
             string assignment = req.Query["assignment"];
             bool isJson = req.Query.ContainsKey("json");
+            bool isToday = req.Query.ContainsKey("today");
 
-            CloudStorageAccount storageAccount = CloudStorage.GetCloudStorageAccount(context);
-            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
-            CloudBlobContainer container = blobClient.GetContainerReference("testresult");
-
-            var blobItems = await CloudStorage.ListBlobsFlatListing(container, assignment, log);
-
-            var testResults = blobItems.Select(c => new { Email = ExtractEmail(c.Uri.ToString()), TestResult = GetTestResult(container, c) });
-
-            var accumulateMarks = testResults.Aggregate(new Dictionary<string, Dictionary<string, int>>(), (acc, item) =>
-             {
-                 if (acc.ContainsKey(item.Email))
-                 {
-                     var previous = acc[item.Email];
-                     var current = item.TestResult;
-                     //Key is testname and Value is list of (testname,mark)
-                     var result = previous.Concat(current).GroupBy(d => d.Key)
-                         .ToDictionary(d => d.Key, d => d.Sum(c => c.Value));
-                     acc[item.Email] = result;
-                     return acc;
-                 }
-                 else
-                 {
-                     acc.Add(item.Email, item.TestResult);
-                     return acc;
-                 }
-             });
-                
-
+            var accumulateMarks = await CalculateMarks(log, context, assignment, isToday);
+            
             if (isJson)
             {
                 return new JsonResult(accumulateMarks);
@@ -77,7 +50,51 @@ namespace AzureGraderFunctionApp
             catch (Exception ex)
             {
                 return new OkObjectResult(ex);
-            }            
+            }
+        }
+
+        public static async Task<Dictionary<string, Dictionary<string, int>>> CalculateMarks(ILogger log, ExecutionContext context, string assignment, bool isToday)
+        {
+            CloudStorageAccount storageAccount = CloudStorage.GetCloudStorageAccount(context);
+            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
+            CloudBlobContainer container = blobClient.GetContainerReference("testresult");
+
+            var blobItems = await CloudStorage.ListBlobsFlatListing(container, assignment, log);
+
+            var testResults = blobItems.Select(c => new
+            {
+                Email = ExtractEmail(c.Uri.ToString()),
+                TestResult = GetTestResult(container, c),
+                CreateTime = GetTestTime(container, c)
+            });
+
+            Func<DateTime, bool> isNotToday = date =>
+                (new DateTime(date.Year, date.Month, date.Day))
+                .Subtract(new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day)).Days != 0;
+
+
+            var accumulateMarks = testResults.Aggregate(new Dictionary<string, Dictionary<string, int>>(), (acc, item) =>
+            {
+                if (isToday && isNotToday(item.CreateTime))
+                {
+                    return acc; //Skip it.
+                }
+
+                if (acc.ContainsKey(item.Email))
+                {
+                    var previous = acc[item.Email];
+                    var current = item.TestResult;
+                    //Key is testname and Value is list of (testname,mark)
+                    var result = previous.Concat(current).GroupBy(d => d.Key)
+                        .ToDictionary(d => d.Key, d => d.Sum(c => c.Value));
+                    acc[item.Email] = result;
+                    return acc;
+                }
+
+                acc.Add(item.Email, item.TestResult);
+                return acc;
+            });
+            return accumulateMarks;
         }
 
         private static void GenerateMarksheet(Dictionary<string, Dictionary<string, int>> accumulateMarks, XLWorkbook workbook)
@@ -109,7 +126,7 @@ namespace AzureGraderFunctionApp
             }
         }
 
-       
+
 
         private static string ExtractEmail(string url)
         {
@@ -148,6 +165,16 @@ namespace AzureGraderFunctionApp
             }
 
             return result;
+        }
+
+        private static DateTime GetTestTime(CloudBlobContainer cloudBlobContainer, IListBlobItem item)
+        {
+            var blobName = item.Uri.ToString().Substring(cloudBlobContainer.Uri.ToString().Length + 1);
+            CloudBlockBlob blob = cloudBlobContainer.GetBlockBlobReference(blobName);
+            var task = blob.FetchAttributesAsync();
+            task.Wait();
+            Debug.Assert(blob.Properties.Created != null, "blob.Properties.Created != null");
+            return blob.Properties.Created.Value.DateTime;
         }
     }
 }

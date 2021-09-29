@@ -95,7 +95,7 @@
         {
           "type": "blobServices/containers",
           "apiVersion": "2019-06-01",
-          "name": "default/credentials",
+          "name": "default/report",
           "dependsOn": [
             "[parameters('uniqueName')]"
           ]
