@@ -39,6 +39,17 @@ namespace AzureAutomaticGradingEngineFunctionApp
                     assignments[i]);
             }
             await Task.WhenAll(tasks);
+
+            tasks = new Task<string>[assignments.Count()];
+            for (var i = 0; i < assignments.Count(); i++)
+            {
+                tasks[i] = context.CallActivityAsync<string>(
+                    "SaveMarkJson",
+                    assignments[i].Name);
+            }
+            await Task.WhenAll(tasks);
+
+
             Console.WriteLine("Completed!");
         }
 
@@ -178,6 +189,39 @@ ILogger log)
             await blob.UploadFromStreamAsync(ms);
         }
 
+        [FunctionName("SaveMarkJson")]
+        public static async Task SaveMarkJson([ActivityTrigger] string assignment,
+            ExecutionContext executionContext,
+            ILogger log)
+        {
+            var now = DateTime.Now;
+            var accumulatedMarks = await GradeReportFunction.CalculateMarks(log, executionContext, assignment, false);
+            var blobName = string.Format(CultureInfo.InvariantCulture, assignment + "/{0:yyyy/MM/dd/HH/mm}/accumulatedMarks.json", now);
+            await SaveJsonReport(executionContext, blobName, accumulatedMarks);
+            blobName = assignment + "/accumulatedMarks.json";
+            await SaveJsonReport(executionContext, blobName, accumulatedMarks);
+            var todayMarks = await GradeReportFunction.CalculateMarks(log, executionContext, assignment, true);
+            blobName = string.Format(CultureInfo.InvariantCulture, assignment + "/{0:yyyy/MM/dd/HH/mm}/todayMarks.json", now);
+            await SaveJsonReport(executionContext, blobName, todayMarks);
+            blobName = assignment + "/todayMarks.json";
+            await SaveJsonReport(executionContext, blobName, todayMarks);
+        }
+
+        private static async Task SaveJsonReport(ExecutionContext executionContext, string blobName, Dictionary<string, Dictionary<string, int>> calculateMarks)
+        {
+            CloudStorageAccount storageAccount = CloudStorage.GetCloudStorageAccount(executionContext);
+            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
+            CloudBlobContainer container = blobClient.GetContainerReference("report");
+            CloudBlockBlob blob = container.GetBlockBlobReference(blobName);
+            blob.Properties.ContentType = "application/json";
+            using var ms = new MemoryStream();
+            using var writer = new StreamWriter(ms);
+            await writer.WriteAsync(JsonConvert.SerializeObject(calculateMarks));
+            await writer.FlushAsync();
+            ms.Position = 0;
+            await blob.UploadFromStreamAsync(ms);
+        }
+
 
         [FunctionName("ScheduleGrader")]
         public static async Task ScheduleGrader(
@@ -196,7 +240,7 @@ ILogger log)
 
         [FunctionName("ManualGrader")]
         public static async Task ManualGrader(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = null)] HttpRequest req, ILogger log, ExecutionContext context,
+            [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)] HttpRequest req, ILogger log, ExecutionContext context,
             [DurableClient] IDurableOrchestrationClient starter
            )
         {
