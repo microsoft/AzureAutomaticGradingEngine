@@ -63,9 +63,11 @@ Properties - "GraderUrl":  The grader HTTP Url
 
 To prevent the typo of assignment name and email address, please use mail merge to send the link to students.
 
-You can get the sample mail merge template /MailMerge
+You can get the sample mail merge template [/MailMerge](https://github.com/microsoft/AzureAutomaticGradingEngine/tree/main/MailMerge)
 
-https://somethingunique.azurewebsites.net/api/StudentRegistrationFunction?project=it114115&email=cywong@vtc.edu.hk
+Using the template will result in your creatings and issuing a unique URL string for each student. The url string will be in the following format.
+
+https://somethingunique.azurewebsites.net/api/StudentRegistrationFunction?project=studnetid&email=studnetemailaddress
 
 ## Student Registration Steps
 [![IMAGE ALT TEXT](http://img.youtube.com/vi/t7PEhPoilLY/0.jpg)](https://youtu.be/t7PEhPoilLY "How to register your student subscription into Azure Automatic Grading Engine")
