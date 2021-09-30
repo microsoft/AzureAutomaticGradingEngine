@@ -16,15 +16,22 @@ The project is being validated through usage on the course [Higher Diploma in Cl
 You can read more about this project at [Microsoft Educator Developer TechCommunity](https://techcommunity.microsoft.com/t5/educator-developer-blog/microsoft-azure-automatic-grading-engine/ba-p/2681809?WT.mc_id=academic-39457-leestott)
 ## Prerequisite
 
+- A singe Azure Storage account with 1 Resource group and 2 containers
+- Containers needed to be named. testresult and credentials with resource group name "azureautomaticgradingengine".
+
+## ARM Deployment 
+
+Azure Resource Manager templates (ARM templates). Is a easy way to deploy services to Azure. 
+
+If your interested in learning more about ARM see the following Microsoft Learn Module [Deploy and manage resource manager templates] (https://docs.microsoft.com/learn/paths/deploy-manage-resource-manager-templates/) In this module you will learn about the structure of the template and the tools you will need for working with templates. If you want to learn about the benefits of using templates and why you should automate deployment with templates, see ARM template overview (https://docs.microsoft.com/azure/azure-resource-manager/templates/overview). 
+
+## To Deploy simply click the deploy to Azure button 
 
 [![Deploy To Azure](https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/deploytoazure.svg?sanitize=true)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2FAzureAutomaticGradingEngine%2Fmain%2Fazuredeploy.json)
-=======
-- 1 Storage account with 2 containers
-- testresult and credentials with resource group name "azureautomaticgradingengine".
 
-[![Deploy To Azure](https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/deploytoazure.svg?sanitize=true)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2FAzureAutomaticGradingEngine%2Fmain%2Fazuredeploy.json)
+## Deployment URL for ARM Template https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2FAzureAutomaticGradingEngine%2Fmain%2Fazuredeploy.json 
 
-https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2FAzureAutomaticGradingEngine%2Fmain%2Fazuredeploy.json 
+## Deployment Walkthrough/demo
 
 [![IMAGE ALT TEXT](http://img.youtube.com/vi/tf4GnPIrDuI/0.jpg)](https://youtu.be/tf4GnPIrDuI "How to deploy Azure Automatic Grading Engine with ARM.")
 
