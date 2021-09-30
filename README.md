@@ -7,13 +7,12 @@ Project collaborators include, [Chan Yiu Leung](https://www.linkedin.com/in/hade
 
 The project is being validated through usage on the course [Higher Diploma in Cloud and Data Centre Administration](https://www.vtc.edu.hk/admission/en/programme/it114115-higher-diploma-in-cloud-and-data-centre-administration/)
 
-## Deployment
-
 ### Architecture
 
 ![Architecture](./images/GraderArchitecture.png)
 
 You can read more about this project at [Microsoft Educator Developer TechCommunity](https://techcommunity.microsoft.com/t5/educator-developer-blog/microsoft-azure-automatic-grading-engine/ba-p/2681809?WT.mc_id=academic-39457-leestott)
+
 ## Prerequisite
 
 - A singe Azure Storage account with 1 Resource group and 2 containers
@@ -29,7 +28,9 @@ If your interested in learning more about ARM see the following Microsoft Learn 
 
 [![Deploy To Azure](https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/deploytoazure.svg?sanitize=true)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2FAzureAutomaticGradingEngine%2Fmain%2Fazuredeploy.json)
 
-## Deployment URL for ARM Template https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2FAzureAutomaticGradingEngine%2Fmain%2Fazuredeploy.json 
+Deployment URL for ARM Template 
+
+https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2FAzureAutomaticGradingEngine%2Fmain%2Fazuredeploy.json 
 
 ## Deployment Walkthrough/demo
 
