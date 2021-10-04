@@ -7,16 +7,32 @@ Project collaborators include, [Chan Yiu Leung](https://www.linkedin.com/in/hade
 
 The project is being validated through usage on the course [Higher Diploma in Cloud and Data Centre Administration](https://www.vtc.edu.hk/admission/en/programme/it114115-higher-diploma-in-cloud-and-data-centre-administration/)
 
-## Deployment
-
 ### Architecture
 
 ![Architecture](./images/GraderArchitecture.png)
 
 You can read more about this project at [Microsoft Educator Developer TechCommunity](https://techcommunity.microsoft.com/t5/educator-developer-blog/microsoft-azure-automatic-grading-engine/ba-p/2681809?WT.mc_id=academic-39457-leestott)
 
+## Prerequisite
+
+- A singe Azure Storage account with 1 Resource group and 2 containers
+- Containers needed to be named. testresult and credentials with resource group name "azureautomaticgradingengine".
+
+## ARM Deployment 
+
+Azure Resource Manager templates (ARM templates). Is a easy way to deploy services to Azure. 
+
+If your interested in learning more about ARM see the following Microsoft Learn Module [Deploy and manage resource manager templates] (https://docs.microsoft.com/learn/paths/deploy-manage-resource-manager-templates/) In this module you will learn about the structure of the template and the tools you will need for working with templates. If you want to learn about the benefits of using templates and why you should automate deployment with templates, see ARM template overview (https://docs.microsoft.com/azure/azure-resource-manager/templates/overview). 
+
+## To Deploy simply click the deploy to Azure button 
+
 [![Deploy To Azure](https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/deploytoazure.svg?sanitize=true)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2FAzureAutomaticGradingEngine%2Fmain%2Fazuredeploy.json)
 
+Deployment URL for ARM Template 
+
+https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2FAzureAutomaticGradingEngine%2Fmain%2Fazuredeploy.json 
+
+## Deployment Walkthrough/demo
 
 [![IMAGE ALT TEXT](http://img.youtube.com/vi/tf4GnPIrDuI/0.jpg)](https://youtu.be/tf4GnPIrDuI "How to deploy Azure Automatic Grading Engine with ARM.")
 
@@ -60,9 +76,11 @@ Properties - "GraderUrl":  The grader HTTP Url
 
 To prevent the typo of assignment name and email address, please use mail merge to send the link to students.
 
-You can get the sample mail merge template /MailMerge
+You can get the sample mail merge template [/MailMerge](https://github.com/microsoft/AzureAutomaticGradingEngine/tree/main/MailMerge)
 
-https://somethingunique.azurewebsites.net/api/StudentRegistrationFunction?project=it114115&email=cywong@vtc.edu.hk
+Using the template will result in your creatings and issuing a unique URL string for each student. The url string will be in the following format.
+
+https://somethingunique.azurewebsites.net/api/StudentRegistrationFunction?project=studnetid&email=studnetemailaddress
 
 ## Student Registration Steps
 [![IMAGE ALT TEXT](http://img.youtube.com/vi/t7PEhPoilLY/0.jpg)](https://youtu.be/t7PEhPoilLY "How to register your student subscription into Azure Automatic Grading Engine")
