@@ -1,13 +1,13 @@
-﻿using Azure;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
+using Azure;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
-namespace AzureGraderFunctionApp
+namespace AzureAutomaticGradingEngineFunctionApp.Helper
 {
     class CloudStorage
     {

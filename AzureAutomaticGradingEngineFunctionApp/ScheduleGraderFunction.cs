@@ -1,4 +1,3 @@
-using AzureGraderFunctionApp;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.DurableTask;
 using Microsoft.Extensions.Logging;
@@ -16,6 +15,7 @@ using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web;
+using AzureAutomaticGradingEngineFunctionApp.Helper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 
@@ -244,7 +244,7 @@ ILogger log)
             [DurableClient] IDurableOrchestrationClient starter
            )
         {
-            string instanceId = await starter.StartNewAsync("ScheduleGraderFunction", null);
+            var instanceId = await starter.StartNewAsync("ScheduleGraderFunction", null);
             log.LogInformation($"Started orchestration with ID = '{instanceId}'.");
         }
     }
