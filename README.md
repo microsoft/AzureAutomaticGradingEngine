@@ -41,6 +41,11 @@ Please skip the setup section as the latest ARM can help you deploy eveything! b
 [![IMAGE ALT TEXT](http://img.youtube.com/vi/LClFO3OkThY/0.jpg)](https://youtu.be/LClFO3OkThY "How to deploy Azure Automatic Grading Engine without ARM.")
 
 
+## Config SMTP
+You have to set the App Settings Key during deployment or in Azure Portal.
+If you want to use gmail, you need to allow [Less Secure Apps](https://myaccount.google.com/lesssecureapps) for your gmail.
+
+
 ## Deploy Demo Assignment Project
 
 This is a sample example where we can validate if students have successfully deployed a Azure VNET within a Azure Resource Group called IT114115.

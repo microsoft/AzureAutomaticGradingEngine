@@ -1,43 +1,25 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Runtime.Serialization.Json;
+using System.Text;
 using System.Threading.Tasks;
+using AzureAutomaticGradingEngineFunctionApp.Model;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
-
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
-using System.Collections.Generic;
-using System.IO;
-using System.Runtime.Serialization;
-using System.Runtime.Serialization.Json;
-using System.Text;
-using AzureAutomaticGradingEngineFunctionApp;
-using Microsoft.ApplicationInsights;
-using Newtonsoft.Json;
 
-namespace AzureGraderFunctionApp
+
+namespace AzureAutomaticGradingEngineFunctionApp
 {
     public static class StudentRegistrationFunction
     {
-        [DataContract]
-        class Confidential
-        {
-            [DataMember] public string clientId;
-            [DataMember] public string clientSecret;
-            [DataMember] public string subscriptionId;
-            [DataMember] public string tenantId;
-            [DataMember] public string activeDirectoryEndpointUrl;
-            [DataMember] public string resourceManagerEndpointUrl;
-            [DataMember] public string activeDirectoryGraphResourceId;
-            [DataMember] public string sqlManagementEndpointUrl;
-            [DataMember] public string galleryEndpointUrl;
-            [DataMember] public string managementEndpointUrl;
-        }
-
-        static Confidential ReadToObject(string json)
+        private static Confidential ReadToObject(string json)
         {
             var deserializedUser = new Confidential();
             var ms = new MemoryStream(Encoding.UTF8.GetBytes(json));
@@ -129,10 +111,10 @@ namespace AzureGraderFunctionApp
                                 .Build();
                 var connectionString = config["storageTestResult"];
 
-                CloudStorageAccount storageAccount = CloudStorageAccount.Parse(connectionString);
-                CloudTableClient tblclient = storageAccount.CreateCloudTableClient();
-                CloudTable credentialsTable = tblclient.GetTableReference("credentials");
-                CloudTable subscriptionTable = tblclient.GetTableReference("subscriptions");
+                var storageAccount = CloudStorageAccount.Parse(connectionString);
+                var cloudTableClient = storageAccount.CreateCloudTableClient();
+                var credentialsTable = cloudTableClient.GetTableReference("credentials");
+                var subscriptionTable = cloudTableClient.GetTableReference("subscriptions");
 
                 var credential = ReadToObject(credentials);
                 string subscriptionId = credential.subscriptionId;

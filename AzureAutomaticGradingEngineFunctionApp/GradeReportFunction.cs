@@ -1,22 +1,22 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Xml;
+using AzureAutomaticGradingEngineFunctionApp.Helper;
+using ClosedXML.Excel;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text.RegularExpressions;
-using System.Xml;
-using ClosedXML.Excel;
-using System.IO;
 
-
-namespace AzureGraderFunctionApp
+namespace AzureAutomaticGradingEngineFunctionApp
 {
     public static class GradeReportFunction
     {
@@ -153,6 +153,13 @@ namespace AzureGraderFunctionApp
             CloudBlockBlob blob = cloudBlobContainer.GetBlockBlobReference(blobName);
 
             string rawXml = blob.DownloadTextAsync().Result;
+            var result = ParseNUnitTestResult(rawXml);
+
+            return result;
+        }
+
+        public static Dictionary<string, int> ParseNUnitTestResult(string rawXml)
+        {
             XmlDocument xmlDoc = new XmlDocument();
             xmlDoc.LoadXml(rawXml);
 
