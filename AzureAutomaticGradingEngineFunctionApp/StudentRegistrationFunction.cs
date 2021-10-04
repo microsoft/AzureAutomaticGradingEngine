@@ -17,7 +17,7 @@ using Microsoft.WindowsAzure.Storage.Table;
 
 namespace AzureAutomaticGradingEngineFunctionApp
 {
-    public static partial class StudentRegistrationFunction
+    public static class StudentRegistrationFunction
     {
         private static Confidential ReadToObject(string json)
         {

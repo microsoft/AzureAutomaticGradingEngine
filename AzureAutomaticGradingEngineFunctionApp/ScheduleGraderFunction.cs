@@ -16,8 +16,10 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web;
 using AzureAutomaticGradingEngineFunctionApp.Helper;
+using AzureAutomaticGradingEngineFunctionApp.Model;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.WebJobs.Extensions.Http;
+using Microsoft.WindowsAzure.Storage.Queue;
 
 namespace AzureAutomaticGradingEngineFunctionApp
 {
@@ -53,17 +55,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
             Console.WriteLine("Completed!");
         }
 
-        public class Assignment
-        {
-            public string Name { get; set; }
-            public ClassContext Context { get; set; }
-        }
 
-        public class ClassContext
-        {
-            public string GraderUrl { get; set; }
-            public string Students { get; set; }
-        }
 
         [FunctionName("GetAssignmentList")]
         public static async Task<List<Assignment>> GetAssignmentList([ActivityTrigger] string name, ExecutionContext executionContext,
@@ -123,9 +115,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
 ILogger log)
         {
 
-            CloudStorageAccount storageAccount = CloudStorage.GetCloudStorageAccount(context);
-            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
-            CloudBlobContainer container = blobClient.GetContainerReference("testresult");
+
 
             string graderUrl = assignment.Context.GraderUrl;
             dynamic students = JsonConvert.DeserializeObject(assignment.Context.Students);
@@ -134,11 +124,11 @@ ILogger log)
             foreach (dynamic student in students)
             {
                 //TODO: Back to parallel call when found the solution to run Nunit test in parallel in Azure Function.
-                await RunAndSaveTestResult(assignment, container, graderUrl, student);
+                await RunAndSaveTestResult(assignment, context, graderUrl, student);
             }
         }
 
-        private static async Task RunAndSaveTestResult(Assignment assignment, CloudBlobContainer container, string graderUrl, dynamic student)
+        private static async Task RunAndSaveTestResult(Assignment assignment, ExecutionContext context, string graderUrl, dynamic student)
         {
             var client = new HttpClient();
             client.Timeout = TimeSpan.FromMinutes(3);
@@ -151,7 +141,7 @@ ILogger log)
             {
                 var watch = System.Diagnostics.Stopwatch.StartNew();
                 var xml = await client.GetStringAsync(uri);
-                await SaveTestResult(container, assignment.Name, student.email.ToString(), xml);
+                await SaveTestResult(context, assignment.Name, student.email.ToString(), xml);
                 watch.Stop();
                 var elapsedMs = watch.ElapsedMilliseconds;
                 Console.WriteLine(student.email + " get test result in " + elapsedMs + "ms.");
@@ -173,10 +163,19 @@ ILogger log)
             return "?" + string.Join("&", array);
         }
 
-        private static async Task SaveTestResult(CloudBlobContainer container, string assignment, string email, string xml)
+        private static async Task SaveTestResult(ExecutionContext context, string assignment, string email, string xml)
         {
+
+            CloudStorageAccount storageAccount = CloudStorage.GetCloudStorageAccount(context);
+            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
+            CloudBlobContainer container = blobClient.GetContainerReference("testresult");
+
+            var cloudQueueClient = storageAccount.CreateCloudQueueClient();
+            var queue = cloudQueueClient.GetQueueReference("messages");
+
+            var now = DateTime.Now;
             var filename = Regex.Replace(email, @"[^0-9a-zA-Z]+", "");
-            var blobName = string.Format(CultureInfo.InvariantCulture, assignment + "/" + email + "/{0:yyyy/MM/dd/HH/mm}/" + filename + ".xml", DateTime.Now);
+            var blobName = string.Format(CultureInfo.InvariantCulture, assignment + "/" + email + "/{0:yyyy/MM/dd/HH/mm}/" + filename + ".xml", now);
             Console.WriteLine(blobName);
 
             CloudBlockBlob blob = container.GetBlockBlobReference(blobName);
@@ -187,6 +186,31 @@ ILogger log)
             await writer.FlushAsync();
             ms.Position = 0;
             await blob.UploadFromStreamAsync(ms);
+
+            var nUnitTestResult = GradeReportFunction.ParseNUnitTestResult(xml);
+
+            var totalMark = nUnitTestResult.Sum(c => c.Value);
+
+            var marks = String.Join("", nUnitTestResult.OrderBy(c => c.Key).Select(c => c.Key + ": " + c.Value + "\n").ToArray());
+
+            var body = $@"
+Dear Student,
+
+You have just earned {totalMark} mark(s).
+
+{marks}
+
+Regards,
+Azure Automatic Grading Engine
+";
+            var emailMessage = new EmailMessage
+            {
+                To = email,
+                Subject = $"Your {assignment} Mark at {now}",
+                Body = body
+            };
+
+            await queue.AddMessageAsync(new CloudQueueMessage(JsonConvert.SerializeObject(emailMessage)));
         }
 
         [FunctionName("SaveMarkJson")]

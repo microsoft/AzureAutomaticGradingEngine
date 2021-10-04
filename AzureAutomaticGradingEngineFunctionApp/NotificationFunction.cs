@@ -1,6 +1,6 @@
-using System;
+using AzureAutomaticGradingEngineFunctionApp.Helper;
+using AzureAutomaticGradingEngineFunctionApp.Model;
 using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Extensions.Logging;
 
 namespace AzureAutomaticGradingEngineFunctionApp
@@ -8,11 +8,15 @@ namespace AzureAutomaticGradingEngineFunctionApp
     public static class NotificationFunction
     {
         [FunctionName("NotificationFunction")]
-        public static void Run([QueueTrigger("messages", Connection = "")]string queueItem, ILogger log)
+        [StorageAccount("storageTestResult")]
+        public static void Run([QueueTrigger("messages")] EmailMessage queueItem, ILogger log, ExecutionContext context)
         {
-            log.LogInformation($"C# Queue trigger function processed: {queueItem}");
+            log.LogInformation($"NotificationFunction Queue trigger function processed: {queueItem}");
 
+            var config = new Config(context);
+            var email = new Email(config, log);
 
+            email.Send(queueItem);
         }
     }
 }

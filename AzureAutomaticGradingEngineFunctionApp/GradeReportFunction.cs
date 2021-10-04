@@ -153,6 +153,13 @@ namespace AzureAutomaticGradingEngineFunctionApp
             CloudBlockBlob blob = cloudBlobContainer.GetBlockBlobReference(blobName);
 
             string rawXml = blob.DownloadTextAsync().Result;
+            var result = ParseNUnitTestResult(rawXml);
+
+            return result;
+        }
+
+        public static Dictionary<string, int> ParseNUnitTestResult(string rawXml)
+        {
             XmlDocument xmlDoc = new XmlDocument();
             xmlDoc.LoadXml(rawXml);
 

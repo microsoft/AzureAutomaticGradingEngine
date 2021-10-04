@@ -14,8 +14,6 @@ The project is being validated through usage on the course [Higher Diploma in Cl
 ![Architecture](./images/GraderArchitecture.png)
 
 You can read more about this project at [Microsoft Educator Developer TechCommunity](https://techcommunity.microsoft.com/t5/educator-developer-blog/microsoft-azure-automatic-grading-engine/ba-p/2681809?WT.mc_id=academic-39457-leestott)
-## Prerequisite
-
 
 [![Deploy To Azure](https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/deploytoazure.svg?sanitize=true)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2FAzureAutomaticGradingEngine%2Fmain%2Fazuredeploy.json)
 
@@ -25,6 +23,11 @@ You can read more about this project at [Microsoft Educator Developer TechCommun
 Please skip the setup section as the latest ARM can help you deploy eveything! but this old video teach you how to rebuild and deploy own your test.
 
 [![IMAGE ALT TEXT](http://img.youtube.com/vi/LClFO3OkThY/0.jpg)](https://youtu.be/LClFO3OkThY "How to deploy Azure Automatic Grading Engine without ARM.")
+
+
+## Config SMTP
+You have to set the App Settings Key during deployment or in Azure Portal.
+If you want to use gmail, you need to allow [Less Secure Apps](https://myaccount.google.com/lesssecureapps) for your gmail.
 
 
 ## Deploy Demo Assignment Project
