@@ -117,7 +117,7 @@ Or update \repos\AzureGraderTestProject\AzureGraderTestProject\Config.cs
 
 ## Scheduler Grader
 
-The scheduler is set to runs every 5 minutes by default and you can change the TimerTrigger expression.
+The scheduler is set to runs every 12 hours by default and you can change the TimerTrigger expression.
 https://github.com/microsoft/AzureAutomaticGradingEngine/blob/master/AzureAutomaticGradingEngineFunctionApp/ScheduleGraderFunction.cs 
 
 testresult: saves Nunit xml test result.

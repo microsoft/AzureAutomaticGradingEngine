@@ -33,28 +33,44 @@ namespace AzureAutomaticGradingEngineFunctionApp
             var assignments = await context.CallActivityAsync<List<Assignment>>("GetAssignmentList", null);
 
             Console.WriteLine(assignments.Count());
-            var tasks = new Task<string>[assignments.Count()];
+            var classJobs = new Task<ClassGradingJob>[assignments.Count()];
             for (var i = 0; i < assignments.Count(); i++)
             {
-                tasks[i] = context.CallActivityAsync<string>(
+                classJobs[i] = context.CallActivityAsync<ClassGradingJob>(
                     "GradeAssignment",
                     assignments[i]);
             }
-            await Task.WhenAll(tasks);
+            await Task.WhenAll(classJobs);
 
-            tasks = new Task<string>[assignments.Count()];
+
+            foreach (var r in classJobs)
+            {
+                var classGradingJob = r.Result;
+                foreach (dynamic student in classGradingJob.students)
+                {
+                    await context.CallActivityAsync<SingleGradingJob>(
+                        "RunAndSaveTestResult",
+                        new SingleGradingJob
+                        {
+                            assignment = classGradingJob.assignment,
+                            graderUrl = classGradingJob.graderUrl,
+                            student = student
+                        });
+                }
+            }
+
+            var task2s = new Task[assignments.Count()];
             for (var i = 0; i < assignments.Count(); i++)
             {
-                tasks[i] = context.CallActivityAsync<string>(
+                task2s[i] = context.CallActivityAsync(
                     "SaveMarkJson",
                     assignments[i].Name);
             }
-            await Task.WhenAll(tasks);
+            await Task.WhenAll(task2s);
 
 
             Console.WriteLine("Completed!");
         }
-
 
 
         [FunctionName("GetAssignmentList")]
@@ -110,45 +126,40 @@ namespace AzureAutomaticGradingEngineFunctionApp
         }
 
 
+
         [FunctionName("GradeAssignment")]
-        public static async Task GradeAssignment([ActivityTrigger] Assignment assignment, ExecutionContext context,
+        public static async Task<ClassGradingJob> GradeAssignment([ActivityTrigger] Assignment assignment, ExecutionContext context,
 ILogger log)
         {
-
-
-
             string graderUrl = assignment.Context.GraderUrl;
             dynamic students = JsonConvert.DeserializeObject(assignment.Context.Students);
 
             Console.WriteLine(assignment.Name + ":" + students.Count);
-            foreach (dynamic student in students)
-            {
-                //TODO: Back to parallel call when found the solution to run Nunit test in parallel in Azure Function.
-                await RunAndSaveTestResult(assignment, context, graderUrl, student);
-            }
+            return new ClassGradingJob() { assignment = assignment, graderUrl = graderUrl, students = students };
         }
 
-        private static async Task RunAndSaveTestResult(Assignment assignment, ExecutionContext context, string graderUrl, dynamic student)
+        [FunctionName("RunAndSaveTestResult")]
+        public static async Task RunAndSaveTestResult([ActivityTrigger] SingleGradingJob job, ExecutionContext context)
         {
             var client = new HttpClient();
             client.Timeout = TimeSpan.FromMinutes(3);
             var queryPair = new NameValueCollection();
-            queryPair.Set("credentials", student.credentials.ToString());
-            queryPair.Set("trace", student.email.ToString());
+            queryPair.Set("credentials", job.student.credentials.ToString());
+            queryPair.Set("trace", job.student.email.ToString());
 
-            var uri = new Uri(graderUrl + ToQueryString(queryPair));
+            var uri = new Uri(job.graderUrl + ToQueryString(queryPair));
             try
             {
                 var watch = System.Diagnostics.Stopwatch.StartNew();
                 var xml = await client.GetStringAsync(uri);
-                await SaveTestResult(context, assignment.Name, student.email.ToString(), xml);
+                await SaveTestResult(context, job.assignment.Name, job.student.email.ToString(), xml);
                 watch.Stop();
                 var elapsedMs = watch.ElapsedMilliseconds;
-                Console.WriteLine(student.email + " get test result in " + elapsedMs + "ms.");
+                Console.WriteLine(job.student.email + " get test result in " + elapsedMs + "ms.");
             }
             catch (Exception ex)
             {
-                Console.WriteLine(student.email + " in error.");
+                Console.WriteLine(job.student.email + " in error.");
                 Console.WriteLine(ex);
             }
         }
@@ -249,7 +260,7 @@ Azure Automatic Grading Engine
 
         [FunctionName("ScheduleGrader")]
         public static async Task ScheduleGrader(
-            [TimerTrigger("0 */60 * * * *")] TimerInfo myTimer,
+            [TimerTrigger("0 0 */12 * * *")] TimerInfo myTimer,
             [DurableClient] IDurableOrchestrationClient starter,
             ILogger log)
         {
