@@ -22,4 +22,19 @@ namespace AzureAutomaticGradingEngineFunctionApp.Model
         public string Subject { get; set; }
         public string Body { get; set; }
     }
+
+    public class ClassGradingJob
+    {
+        public Assignment assignment { get; set; }
+        public string graderUrl { get; set; }
+        public dynamic students { get; set; }
+    }
+
+    public class SingleGradingJob
+    {
+        public Assignment assignment { get; set; }
+        public string graderUrl { get; set; }
+        public dynamic student { get; set; }
+    }
+
 }
