@@ -25,8 +25,32 @@ namespace AzureAutomaticGradingEngineFunctionApp
 {
     public static class ScheduleGraderFunction
     {
+        [FunctionName("ScheduleGrader")]
+        public static async Task ScheduleGrader(
+            [TimerTrigger("0 0 */12 * * *")] TimerInfo myTimer,
+            //[TimerTrigger("0 0 * * * *")] TimerInfo myTimer,
+            [DurableClient] IDurableOrchestrationClient starter,
+            ILogger log)
+        {
+            if (myTimer.IsPastDue)
+            {
+                log.LogInformation("Timer is running late!");
+            }
+            string instanceId = await starter.StartNewAsync("ScheduleGraderOrchestrationFunction", null);
+            log.LogInformation($"Started orchestration with ID = '{instanceId}'.");
+        }
 
-        [FunctionName("ScheduleGraderFunction")]
+        [FunctionName("ManualRunScheduleGraderOrchestrationFunction")]
+        public static async Task ManualGrader(
+            [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)] HttpRequest req, ILogger log, ExecutionContext context,
+            [DurableClient] IDurableOrchestrationClient starter
+        )
+        {
+            var instanceId = await starter.StartNewAsync("ScheduleGraderOrchestrationFunction", null);
+            log.LogInformation($"Started orchestration with ID = '{instanceId}'.");
+        }
+
+        [FunctionName("ScheduleGraderOrchestrationFunction")]
         public static async Task RunOrchestrator(
             [OrchestrationTrigger] IDurableOrchestrationContext context, ILogger log)
         {
@@ -124,8 +148,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
             }
             return results;
         }
-
-
+        
 
         [FunctionName("GradeAssignment")]
         public static async Task<ClassGradingJob> GradeAssignment([ActivityTrigger] Assignment assignment, ExecutionContext context,
@@ -141,6 +164,13 @@ ILogger log)
         [FunctionName("RunAndSaveTestResult")]
         public static async Task RunAndSaveTestResult([ActivityTrigger] SingleGradingJob job, ExecutionContext context)
         {
+            CloudStorageAccount storageAccount = CloudStorage.GetCloudStorageAccount(context);
+            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
+            CloudBlobContainer container = blobClient.GetContainerReference("testresult");
+
+            var cloudQueueClient = storageAccount.CreateCloudQueueClient();
+            var queue = cloudQueueClient.GetQueueReference("messages");
+
             var client = new HttpClient();
             client.Timeout = TimeSpan.FromMinutes(3);
             var queryPair = new NameValueCollection();
@@ -152,7 +182,9 @@ ILogger log)
             {
                 var watch = System.Diagnostics.Stopwatch.StartNew();
                 var xml = await client.GetStringAsync(uri);
-                await SaveTestResult(context, job.assignment.Name, job.student.email.ToString(), xml);
+                var now = DateTime.Now;
+                await SaveTestResult(container, job.assignment.Name, job.student.email.ToString(), xml, now);
+                await SendTestResultToStudent(queue, job.assignment.Name, job.student.email.ToString(), xml, now);
                 watch.Stop();
                 var elapsedMs = watch.ElapsedMilliseconds;
                 Console.WriteLine(job.student.email + " get test result in " + elapsedMs + "ms.");
@@ -174,17 +206,9 @@ ILogger log)
             return "?" + string.Join("&", array);
         }
 
-        private static async Task SaveTestResult(ExecutionContext context, string assignment, string email, string xml)
+        private static async Task SaveTestResult(CloudBlobContainer container, string assignment, string email, string xml, DateTime now)
         {
 
-            CloudStorageAccount storageAccount = CloudStorage.GetCloudStorageAccount(context);
-            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
-            CloudBlobContainer container = blobClient.GetContainerReference("testresult");
-
-            var cloudQueueClient = storageAccount.CreateCloudQueueClient();
-            var queue = cloudQueueClient.GetQueueReference("messages");
-
-            var now = DateTime.Now;
             var filename = Regex.Replace(email, @"[^0-9a-zA-Z]+", "");
             var blobName = string.Format(CultureInfo.InvariantCulture, assignment + "/" + email + "/{0:yyyy/MM/dd/HH/mm}/" + filename + ".xml", now);
             Console.WriteLine(blobName);
@@ -197,12 +221,17 @@ ILogger log)
             await writer.FlushAsync();
             ms.Position = 0;
             await blob.UploadFromStreamAsync(ms);
+        }
 
+        private static async Task SendTestResultToStudent(CloudQueue queue, string assignment, string email, string xml,
+            DateTime now)
+        {
             var nUnitTestResult = GradeReportFunction.ParseNUnitTestResult(xml);
 
             var totalMark = nUnitTestResult.Sum(c => c.Value);
 
-            var marks = String.Join("", nUnitTestResult.OrderBy(c => c.Key).Select(c => c.Key + ": " + c.Value + "\n").ToArray());
+            var marks = String.Join("",
+                nUnitTestResult.OrderBy(c => c.Key).Select(c => c.Key + ": " + c.Value + "\n").ToArray());
 
             var body = $@"
 Dear Student,
@@ -255,32 +284,6 @@ Azure Automatic Grading Engine
             await writer.FlushAsync();
             ms.Position = 0;
             await blob.UploadFromStreamAsync(ms);
-        }
-
-
-        [FunctionName("ScheduleGrader")]
-        public static async Task ScheduleGrader(
-            [TimerTrigger("0 0 */12 * * *")] TimerInfo myTimer,
-            [DurableClient] IDurableOrchestrationClient starter,
-            ILogger log)
-        {
-            if (myTimer.IsPastDue)
-            {
-                log.LogInformation("Timer is running late!");
-            }
-            string instanceId = await starter.StartNewAsync("ScheduleGraderFunction", null);
-
-            log.LogInformation($"Started orchestration with ID = '{instanceId}'.");
-        }
-
-        [FunctionName("ManualGrader")]
-        public static async Task ManualGrader(
-            [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)] HttpRequest req, ILogger log, ExecutionContext context,
-            [DurableClient] IDurableOrchestrationClient starter
-           )
-        {
-            var instanceId = await starter.StartNewAsync("ScheduleGraderFunction", null);
-            log.LogInformation($"Started orchestration with ID = '{instanceId}'.");
         }
     }
 }
