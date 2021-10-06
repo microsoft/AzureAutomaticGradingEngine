@@ -190,7 +190,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
                 var xml = await client.GetStringAsync(uri);
                 var now = DateTime.Now;
                 await SaveTestResult(container, job.assignment.Name, job.student.email.ToString(), xml, now);
-                await SendTestResultToStudent(context, log, job.assignment.Name, job.student.email.ToString(), xml, now);
+                SendTestResultToStudent(context, log, job.assignment.Name, job.student.email.ToString(), xml, now);
                 watch.Stop();
                 var elapsedMs = watch.ElapsedMilliseconds;
                 Console.WriteLine(job.student.email + " get test result in " + elapsedMs + "ms.");
