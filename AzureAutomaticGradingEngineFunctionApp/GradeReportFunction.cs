@@ -68,14 +68,12 @@ namespace AzureAutomaticGradingEngineFunctionApp
                 CreateTime = GetTestTime(container, c)
             });
 
-            Func<DateTime, bool> isNotToday = date =>
-                (new DateTime(date.Year, date.Month, date.Day))
-                .Subtract(new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day)).Days != 0;
+            bool IsNotToday(DateTime date) => (new DateTime(date.Year, date.Month, date.Day)).Subtract(new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day)).Days != 0;
 
 
             var accumulateMarks = testResults.Aggregate(new Dictionary<string, Dictionary<string, int>>(), (acc, item) =>
             {
-                if (isToday && isNotToday(item.CreateTime))
+                if (isToday && IsNotToday(item.CreateTime))
                 {
                     return acc; //Skip it.
                 }

@@ -175,14 +175,6 @@
           "dependsOn": [
             "[parameters('uniqueName')]"
           ]
-        },
-        {
-          "type": "queueServices/queues",
-          "apiVersion": "2021-04-01",
-          "name": "default/messages",
-          "dependsOn": [
-            "[parameters('uniqueName')]"
-          ]
         }
       ]
     }

@@ -57,22 +57,17 @@ namespace AzureAutomaticGradingEngineFunctionApp
             var assignments = await context.CallActivityAsync<List<Assignment>>("GetAssignmentList", null);
 
             Console.WriteLine(assignments.Count());
-            var classJobs = new Task<ClassGradingJob>[assignments.Count()];
+            var classJobs = new List<ClassGradingJob>();
             for (var i = 0; i < assignments.Count(); i++)
             {
-                classJobs[i] = context.CallActivityAsync<ClassGradingJob>(
-                    "GradeAssignment",
-                    assignments[i]);
+                classJobs.Add(GradeAssignment(assignments[i]));
             }
-            await Task.WhenAll(classJobs);
 
-
-            foreach (var r in classJobs)
+            foreach (var classGradingJob in classJobs)
             {
-                var classGradingJob = r.Result;
                 foreach (dynamic student in classGradingJob.students)
                 {
-                    await context.CallActivityAsync<SingleGradingJob>(
+                    await context.CallActivityAsync(
                         "RunAndSaveTestResult",
                         new SingleGradingJob
                         {
@@ -105,7 +100,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
             {
                 task2s[i] = context.CallActivityAsync(
                     "SaveMarkJson",
-                    assignments[i].Name);
+                    assignments[i]);
             }
             await Task.WhenAll(task2s);
 
@@ -166,28 +161,21 @@ namespace AzureAutomaticGradingEngineFunctionApp
             }
             return results;
         }
-        
 
-        [FunctionName("GradeAssignment")]
-        public static async Task<ClassGradingJob> GradeAssignment([ActivityTrigger] Assignment assignment, ExecutionContext context,
-ILogger log)
-        {
+        
+        public static ClassGradingJob GradeAssignment(Assignment assignment) {
             string graderUrl = assignment.Context.GraderUrl;
             dynamic students = JsonConvert.DeserializeObject(assignment.Context.Students);
-
             Console.WriteLine(assignment.Name + ":" + students.Count);
             return new ClassGradingJob() { assignment = assignment, graderUrl = graderUrl, students = students };
         }
 
         [FunctionName("RunAndSaveTestResult")]
-        public static async Task RunAndSaveTestResult([ActivityTrigger] SingleGradingJob job, ExecutionContext context)
+        public static async Task RunAndSaveTestResult([ActivityTrigger] SingleGradingJob job, ExecutionContext context, ILogger log)
         {
             CloudStorageAccount storageAccount = CloudStorage.GetCloudStorageAccount(context);
             CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
             CloudBlobContainer container = blobClient.GetContainerReference("testresult");
-
-            var cloudQueueClient = storageAccount.CreateCloudQueueClient();
-            var queue = cloudQueueClient.GetQueueReference("messages");
 
             var client = new HttpClient();
             client.Timeout = TimeSpan.FromMinutes(3);
@@ -202,7 +190,7 @@ ILogger log)
                 var xml = await client.GetStringAsync(uri);
                 var now = DateTime.Now;
                 await SaveTestResult(container, job.assignment.Name, job.student.email.ToString(), xml, now);
-                await SendTestResultToStudent(queue, job.assignment.Name, job.student.email.ToString(), xml, now);
+                await SendTestResultToStudent(context, log, job.assignment.Name, job.student.email.ToString(), xml, now);
                 watch.Stop();
                 var elapsedMs = watch.ElapsedMilliseconds;
                 Console.WriteLine(job.student.email + " get test result in " + elapsedMs + "ms.");
@@ -241,8 +229,7 @@ ILogger log)
             await blob.UploadFromStreamAsync(ms);
         }
 
-        private static async Task SendTestResultToStudent(CloudQueue queue, string assignment, string email, string xml,
-            DateTime now)
+        private static void SendTestResultToStudent(ExecutionContext context, ILogger log, string assignment, string email, string xml, DateTime now)
         {
             var nUnitTestResult = GradeReportFunction.ParseNUnitTestResult(xml);
 
@@ -261,7 +248,7 @@ You have just earned {totalMark} mark(s).
 Regards,
 Azure Automatic Grading Engine
 
-Raw XML:
+Raw NUnit Test Result:
 {xml}
 ";
             var emailMessage = new EmailMessage
@@ -271,25 +258,41 @@ Raw XML:
                 Body = body
             };
 
-            await queue.AddMessageAsync(new CloudQueueMessage(JsonConvert.SerializeObject(emailMessage)));
+            var config = new Config(context);
+            var emailClient = new Email(config, log);
+            emailClient.Send(emailMessage);
         }
 
         [FunctionName("SaveMarkJson")]
-        public static async Task SaveMarkJson([ActivityTrigger] string assignment,
+        public static async Task SaveMarkJson([ActivityTrigger] Assignment assignment,
             ExecutionContext executionContext,
             ILogger log)
         {
             var now = DateTime.Now;
-            var accumulatedMarks = await GradeReportFunction.CalculateMarks(log, executionContext, assignment, false);
-            var blobName = string.Format(CultureInfo.InvariantCulture, assignment + "/{0:yyyy/MM/dd/HH/mm}/accumulatedMarks.json", now);
+            var accumulatedMarks = await GradeReportFunction.CalculateMarks(log, executionContext, assignment.Name, false);
+            var blobName = string.Format(CultureInfo.InvariantCulture, assignment.Name + "/{0:yyyy/MM/dd/HH/mm}/accumulatedMarks.json", now);
             await SaveJsonReport(executionContext, blobName, accumulatedMarks);
-            blobName = assignment + "/accumulatedMarks.json";
+            blobName = assignment.Name + "/accumulatedMarks.json";
             await SaveJsonReport(executionContext, blobName, accumulatedMarks);
-            var todayMarks = await GradeReportFunction.CalculateMarks(log, executionContext, assignment, true);
-            blobName = string.Format(CultureInfo.InvariantCulture, assignment + "/{0:yyyy/MM/dd/HH/mm}/todayMarks.json", now);
+            var todayMarks = await GradeReportFunction.CalculateMarks(log, executionContext, assignment.Name, true);
+            blobName = string.Format(CultureInfo.InvariantCulture, assignment.Name + "/{0:yyyy/MM/dd/HH/mm}/todayMarks.json", now);
             await SaveJsonReport(executionContext, blobName, todayMarks);
-            blobName = assignment + "/todayMarks.json";
+            blobName = assignment.Name + "/todayMarks.json";
             await SaveJsonReport(executionContext, blobName, todayMarks);
+
+            if (!string.IsNullOrEmpty(assignment.TeacherEmail))
+            {
+                var emailMessage = new EmailMessage
+                {
+                    To = assignment.TeacherEmail,
+                    Subject = $"Accumulated Mark for {assignment.Name} at {now}",
+                    Body = JsonConvert.SerializeObject(accumulatedMarks)
+                };
+
+                var config = new Config(executionContext);
+                var email = new Email(config, log);
+                email.Send(emailMessage);
+            }
         }
 
         private static async Task SaveJsonReport(ExecutionContext executionContext, string blobName, Dictionary<string, Dictionary<string, int>> calculateMarks)
