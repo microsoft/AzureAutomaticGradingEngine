@@ -68,7 +68,9 @@ This service is tested with [Azure for student subscription](http://aka.ms/azure
 
 You need to add a Entity in assignments table.
 Partition Key: assignment or project name such as it114115
-Properties - "GraderUrl":  The grader HTTP Url
+Properties:
+"GraderUrl":  The grader HTTP Url 
+"TeacherEmail":  Teacher Email for class grade report. (Optional)
 ![Assignment](./images/AssignmentTableRecord.png)
 
 # Email Registeration Link to your student.

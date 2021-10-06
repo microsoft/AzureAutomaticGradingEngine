@@ -81,6 +81,23 @@ namespace AzureAutomaticGradingEngineFunctionApp
                             student = student
                         });
                 }
+
+                // Parallel mode code is working due to Azure Function cannot run NUnit in parallel.
+                //var gradingTasks = new Task<SingleGradingJob>[classGradingJob.students.Count];
+                //var i = 0;
+                //foreach (dynamic student in classGradingJob.students)
+                //{
+                //    gradingTasks[i] = context.CallActivityAsync<SingleGradingJob>(
+                //        "RunAndSaveTestResult",
+                //        new SingleGradingJob
+                //        {
+                //            assignment = classGradingJob.assignment,
+                //            graderUrl = classGradingJob.graderUrl,
+                //            student = student
+                //        });
+                //    i++;
+                //}
+                //await Task.WhenAll(gradingTasks);
             }
 
             var task2s = new Task[assignments.Count()];
@@ -108,10 +125,10 @@ namespace AzureAutomaticGradingEngineFunctionApp
             CloudTable credentialsTable = cloudTableClient.GetTableReference("credentials");
 
             TableContinuationToken token = null;
-            var assignments = new List<DynamicTableEntity>();
+            var assignments = new List<AssignmentTableEntity>();
             do
             {
-                var queryResult = await assignmentsTable.ExecuteQuerySegmentedAsync(new TableQuery(), token);
+                var queryResult = await assignmentsTable.ExecuteQuerySegmentedAsync(new TableQuery<AssignmentTableEntity>(), token);
                 assignments.AddRange(queryResult.Results);
                 token = queryResult.ContinuationToken;
             } while (token != null);
@@ -119,29 +136,30 @@ namespace AzureAutomaticGradingEngineFunctionApp
             var results = new List<Assignment>();
             foreach (var assignment in assignments)
             {
-                string graderUrl = assignment.Properties["GraderUrl"].StringValue;
+                string graderUrl = assignment.GraderUrl;
                 string project = assignment.PartitionKey;
 
-                var studentDynamic = new List<DynamicTableEntity>();
+                var credentialsTableEntities = new List<CredentialsTableEntity>();
                 do
                 {
                     var queryResult = await credentialsTable.ExecuteQuerySegmentedAsync(
-                        new TableQuery().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, project)), token);
-                    studentDynamic.AddRange(queryResult.Results);
+                        new TableQuery<CredentialsTableEntity>().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, project)), token);
+                    credentialsTableEntities.AddRange(queryResult.Results);
                     token = queryResult.ContinuationToken;
                 } while (token != null);
 
 
-                var students = studentDynamic.Select(c => new
+                var students = credentialsTableEntities.Select(c => new
                 {
                     email = c.RowKey,
-                    credentials = c.Properties["Credentials"].StringValue
+                    credentials = c.Credentials
                 }).ToArray();
 
 
                 results.Add(new Assignment
                 {
                     Name = project,
+                    TeacherEmail = assignment.TeacherEmail,
                     Context = new ClassContext() { GraderUrl = graderUrl, Students = JsonConvert.SerializeObject(students) }
                 });
 
@@ -242,6 +260,9 @@ You have just earned {totalMark} mark(s).
 
 Regards,
 Azure Automatic Grading Engine
+
+Raw XML:
+{xml}
 ";
             var emailMessage = new EmailMessage
             {

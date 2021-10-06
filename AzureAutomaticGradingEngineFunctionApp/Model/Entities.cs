@@ -7,6 +7,7 @@ namespace AzureAutomaticGradingEngineFunctionApp.Model
     public class Assignment
     {
         public string Name { get; set; }
+        public string TeacherEmail { get; set; }
         public ClassContext Context { get; set; }
     }
 
