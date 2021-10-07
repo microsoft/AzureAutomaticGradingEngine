@@ -34,7 +34,7 @@ namespace AzureAutomaticGradingEngineFunctionApp.Helper
             _client.Credentials = new System.Net.NetworkCredential(loginName, password);
         }
 
-        public void Send(EmailMessage email)
+        public void Send(EmailMessage email, Attachment[] attachments)
         {
             if (_client == null)
             {
@@ -42,6 +42,15 @@ namespace AzureAutomaticGradingEngineFunctionApp.Helper
                 return;
             }
             var message = new MailMessage(_fromAddress, email.To, email.Subject, email.Body);
+
+            if (attachments != null)
+            {
+                foreach (var attachment in attachments)
+                {
+                    message.Attachments.Add(attachment);
+                }
+            }
+            
             _client.Send(message);
         }
     }

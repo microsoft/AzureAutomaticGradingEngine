@@ -68,7 +68,9 @@ This service is tested with [Azure for student subscription](http://aka.ms/azure
 
 You need to add a Entity in assignments table.
 Partition Key: assignment or project name such as it114115
-Properties - "GraderUrl":  The grader HTTP Url
+Properties:
+"GraderUrl":  The grader HTTP Url 
+"TeacherEmail":  Teacher Email for class grade report. (Optional)
 ![Assignment](./images/AssignmentTableRecord.png)
 
 # Email Registeration Link to your student.
@@ -91,11 +93,13 @@ https://somethingunique.azurewebsites.net/api/StudentRegistrationFunction?projec
 <code>az account set --subscription <your-subscriptions-id></code>
 5.	Check the current subscriptions.
 <code>az account show</code>
-6.	Create SDK Auth 
+6.	Create SDK Auth, keep it privately and remenber don't run this command again.
 <code>az ad sp create-for-rbac -n "gradingengine" --sdk-auth</code>
 7.	Submit online registration form.
 
-Remark: Subscription ID must be unique for each assignment.
+Remark: 
+1. Subscription ID must be unique for each assignment.
+2. Don't run <code>az ad sp create-for-rbac -n "gradingengine" --sdk-auth</code> repeatedly! Teacher needs to remove the student in subscription table and ask your student resubmits the online form for the new credentials.
 
 ## Quick test with AzureGraderConsoleRunner
 
