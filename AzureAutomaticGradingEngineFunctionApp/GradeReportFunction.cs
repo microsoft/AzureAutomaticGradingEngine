@@ -36,21 +36,26 @@ namespace AzureAutomaticGradingEngineFunctionApp
             {
                 return new JsonResult(accumulateMarks);
             }
-
-            string contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            
             try
             {
-                using var workbook = new XLWorkbook();
-                GenerateMarksheet(accumulateMarks, workbook);
-                var stream = new MemoryStream();
-                workbook.SaveAs(stream);
+                await using var stream = new MemoryStream();
+                WriteWorkbookToMemoryStream(accumulateMarks, stream);
                 var content = stream.ToArray();
-                return new FileContentResult(content, contentType);
+                return new FileContentResult(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
             }
             catch (Exception ex)
             {
                 return new OkObjectResult(ex);
             }
+        }
+
+        public static MemoryStream WriteWorkbookToMemoryStream(Dictionary<string, Dictionary<string, int>> accumulateMarks, MemoryStream stream)
+        {
+            using var workbook = new XLWorkbook();
+            GenerateMarksheet(accumulateMarks, workbook);
+            workbook.SaveAs(stream);
+            return stream;
         }
 
         public static async Task<Dictionary<string, Dictionary<string, int>>> CalculateMarks(ILogger log, ExecutionContext context, string assignment, bool isToday)
@@ -123,8 +128,6 @@ namespace AzureAutomaticGradingEngineFunctionApp
                 }
             }
         }
-
-
 
         private static string ExtractEmail(string url)
         {

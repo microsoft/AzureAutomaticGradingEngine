@@ -12,6 +12,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Mail;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web;
@@ -162,8 +163,9 @@ namespace AzureAutomaticGradingEngineFunctionApp
             return results;
         }
 
-        
-        public static ClassGradingJob GradeAssignment(Assignment assignment) {
+
+        public static ClassGradingJob GradeAssignment(Assignment assignment)
+        {
             string graderUrl = assignment.Context.GraderUrl;
             dynamic students = JsonConvert.DeserializeObject(assignment.Context.Students);
             Console.WriteLine(assignment.Name + ":" + students.Count);
@@ -216,11 +218,11 @@ namespace AzureAutomaticGradingEngineFunctionApp
         {
 
             var filename = Regex.Replace(email, @"[^0-9a-zA-Z]+", "");
-            var blobName = string.Format(CultureInfo.InvariantCulture, assignment + "/" + email + "/{0:yyyy/MM/dd/HH/mm}/" + filename + ".xml", now);
+            var blobName = string.Format(CultureInfo.InvariantCulture, assignment + "/" + email + "/{0:yyyy/MM/dd/HH/mm}/" + filename + ".content", now);
             Console.WriteLine(blobName);
 
             CloudBlockBlob blob = container.GetBlockBlobReference(blobName);
-            blob.Properties.ContentType = "application/xml";
+            blob.Properties.ContentType = "application/content";
             using var ms = new MemoryStream();
             using var writer = new StreamWriter(ms);
             await writer.WriteAsync(xml);
@@ -247,9 +249,6 @@ You have just earned {totalMark} mark(s).
 
 Regards,
 Azure Automatic Grading Engine
-
-Raw NUnit Test Result:
-{xml}
 ";
             var emailMessage = new EmailMessage
             {
@@ -260,7 +259,17 @@ Raw NUnit Test Result:
 
             var config = new Config(context);
             var emailClient = new Email(config, log);
-            emailClient.Send(emailMessage);
+            emailClient.Send(emailMessage, new[] { StringToAttachment(xml, "TestResult.xml", "text/xml") });
+        }
+
+        private static Attachment StringToAttachment(string content, string name, string mediaType)
+        {
+            using var ms = new MemoryStream();
+            using var writer = new StreamWriter(ms, leaveOpen: true);
+            writer.Write(content);
+            writer.Flush();
+            ms.Position = 0;
+            return new Attachment(new MemoryStream(ms.ToArray()), name, mediaType);
         }
 
         [FunctionName("SaveMarkJson")]
@@ -286,12 +295,26 @@ Raw NUnit Test Result:
                 {
                     To = assignment.TeacherEmail,
                     Subject = $"Accumulated Mark for {assignment.Name} at {now}",
-                    Body = JsonConvert.SerializeObject(accumulatedMarks)
+                    Body = @"Dear Teacher, 
+
+Here are the accumulated mark report.
+
+Regards,
+Azure Automatic Grading Engine
+"
                 };
 
                 var config = new Config(executionContext);
                 var email = new Email(config, log);
-                email.Send(emailMessage);
+
+                var workbookMemoryStream = new MemoryStream();
+                GradeReportFunction.WriteWorkbookToMemoryStream(accumulatedMarks, workbookMemoryStream);
+                workbookMemoryStream = new MemoryStream(workbookMemoryStream.ToArray());
+                var excelAttachment = new Attachment(workbookMemoryStream, "accumulatedMarks.xlsx",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+                var jsonAttachment = StringToAttachment(JsonConvert.SerializeObject(accumulatedMarks),
+                    "accumulatedMarks.json", "application/json");
+                email.Send(emailMessage, new[] { excelAttachment, jsonAttachment });
             }
         }
 
