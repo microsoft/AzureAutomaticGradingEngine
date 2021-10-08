@@ -52,6 +52,7 @@ namespace AzureAutomaticGradingEngineFunctionApp.Helper
             }
             
             _client.Send(message);
+            _log.LogInformation("Sent email to " + email.To);
         }
     }
 }
