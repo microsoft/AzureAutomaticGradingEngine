@@ -18,6 +18,7 @@ using System.Threading.Tasks;
 using System.Web;
 using AzureAutomaticGradingEngineFunctionApp.Helper;
 using AzureAutomaticGradingEngineFunctionApp.Model;
+using DocumentFormat.OpenXml.Spreadsheet;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.WindowsAzure.Storage.Queue;
@@ -134,6 +135,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
             {
                 string graderUrl = assignment.GraderUrl;
                 string project = assignment.PartitionKey;
+                bool SendMarkEmailToStudents = assignment.SendMarkEmailToStudents.HasValue && assignment.SendMarkEmailToStudents.Value;
 
                 var credentialsTableEntities = new List<CredentialsTableEntity>();
                 do
@@ -156,6 +158,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
                 {
                     Name = project,
                     TeacherEmail = assignment.TeacherEmail,
+                    SendMarkEmailToStudents = SendMarkEmailToStudents,
                     Context = new ClassContext() { GraderUrl = graderUrl, Students = JsonConvert.SerializeObject(students) }
                 });
 
@@ -192,7 +195,8 @@ namespace AzureAutomaticGradingEngineFunctionApp
                 var xml = await client.GetStringAsync(uri);
                 var now = DateTime.Now;
                 await SaveTestResult(container, job.assignment.Name, job.student.email.ToString(), xml, now);
-                SendTestResultToStudent(context, log, job.assignment.Name, job.student.email.ToString(), xml, now);
+                if (job.assignment.SendMarkEmailToStudents)
+                    SendTestResultToStudent(context, log, job.assignment.Name, job.student.email.ToString(), xml, now);
                 watch.Stop();
                 var elapsedMs = watch.ElapsedMilliseconds;
                 Console.WriteLine(job.student.email + " get test result in " + elapsedMs + "ms.");
@@ -216,7 +220,6 @@ namespace AzureAutomaticGradingEngineFunctionApp
 
         private static async Task SaveTestResult(CloudBlobContainer container, string assignment, string email, string xml, DateTime now)
         {
-
             var filename = Regex.Replace(email, @"[^0-9a-zA-Z]+", "");
             var blobName = string.Format(CultureInfo.InvariantCulture, assignment + "/" + email + "/{0:yyyy/MM/dd/HH/mm}/" + filename + ".content", now);
             Console.WriteLine(blobName);
@@ -288,6 +291,14 @@ Azure Automatic Grading Engine
             await SaveJsonReport(executionContext, blobName, todayMarks);
             blobName = assignment.Name + "/todayMarks.json";
             await SaveJsonReport(executionContext, blobName, todayMarks);
+            
+            var workbookMemoryStream = new MemoryStream();
+            GradeReportFunction.WriteWorkbookToMemoryStream(accumulatedMarks, workbookMemoryStream);
+
+            blobName = string.Format(CultureInfo.InvariantCulture, assignment.Name + "/{0:yyyy/MM/dd/HH/mm}/marks.json", now);
+            await SaveExcelReport(executionContext, blobName, workbookMemoryStream);
+            blobName = assignment.Name + "/marks.xlsx";
+            await SaveExcelReport(executionContext, blobName, workbookMemoryStream);
 
             if (!string.IsNullOrEmpty(assignment.TeacherEmail))
             {
@@ -306,9 +317,6 @@ Azure Automatic Grading Engine
 
                 var config = new Config(executionContext);
                 var email = new Email(config, log);
-
-                var workbookMemoryStream = new MemoryStream();
-                GradeReportFunction.WriteWorkbookToMemoryStream(accumulatedMarks, workbookMemoryStream);
                 workbookMemoryStream = new MemoryStream(workbookMemoryStream.ToArray());
                 var excelAttachment = new Attachment(workbookMemoryStream, "accumulatedMarks.xlsx",
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
@@ -331,6 +339,17 @@ Azure Automatic Grading Engine
             await writer.FlushAsync();
             ms.Position = 0;
             await blob.UploadFromStreamAsync(ms);
+        }
+
+        private static async Task SaveExcelReport(ExecutionContext executionContext, string blobName, Stream excelMemoryStream)
+        {
+            CloudStorageAccount storageAccount = CloudStorage.GetCloudStorageAccount(executionContext);
+            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
+            CloudBlobContainer container = blobClient.GetContainerReference("report");
+            CloudBlockBlob blob = container.GetBlockBlobReference(blobName);
+            blob.Properties.ContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            excelMemoryStream.Position = 0;
+            await blob.UploadFromStreamAsync(excelMemoryStream);
         }
     }
 }

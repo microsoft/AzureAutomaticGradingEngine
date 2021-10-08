@@ -71,6 +71,7 @@ Partition Key: assignment or project name such as it114115
 Properties:
 "GraderUrl":  The grader HTTP Url 
 "TeacherEmail":  Teacher Email for class grade report. (Optional)
+"SendMarkEmailToStudents": type bool and set it to true if you want to send mark report to students. If this property does not exist, email will not send.
 ![Assignment](./images/AssignmentTableRecord.png)
 
 # Email Registeration Link to your student.
@@ -99,7 +100,7 @@ https://somethingunique.azurewebsites.net/api/StudentRegistrationFunction?projec
 
 Remark: 
 1. Subscription ID must be unique for each assignment.
-2. Don't run <code>az ad sp create-for-rbac -n "gradingengine" --sdk-auth</code> repeatedly! Teacher needs to remove the student in subscription table and ask your student resubmits the online form for the new credentials.
+2. Don't run <code>az ad sp create-for-rbac -n "gradingengine" --sdk-auth</code> repeatedly! Teacher needs to remove the student in subscription table and asks your student to resubmit the online form with the new credentials.
 
 ## Quick test with AzureGraderConsoleRunner
 
