@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization.Json;
 using System.Text;
@@ -34,7 +33,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req,
             ILogger log, ExecutionContext context)
         {
-            log.LogInformation("Start AzureGraderFunction");
+            log.LogInformation("Start StudentRegistrationFunction");
 
 
             if (req.Method == "GET")
@@ -42,26 +41,13 @@ namespace AzureAutomaticGradingEngineFunctionApp
 
                 if (!req.Query.ContainsKey("email") || !req.Query.ContainsKey("project"))
                 {
-                    return new ContentResult()
-                    {
-                        Content = "Invalid Url and it should contain project and email!",
-                        ContentType = "text/html",
-                        StatusCode = 200,
-                    };
+                    return GetContentResult("Invalid Url and it should contain project and email!");
                 }
                 else
                 {
                     string project = req.Query["project"];
                     string email = req.Query["email"];
-                    string html = $@"
-<!DOCTYPE html>
-
-<html lang='en' xmlns='http://www.w3.org/1999/xhtml'>
-<head>
-    <meta charset='utf-8' />
-    <title>Azure Grader</title>
-</head>
-<body>
+                    string form = $@"
     <form id='form' method='post'>
         <input type='hidden' id='classroomName' name='project' value='{project}'>
         <label for='Email'>Email:</label><br>
@@ -71,37 +57,20 @@ namespace AzureAutomaticGradingEngineFunctionApp
         <br/>
         <button type='submit'>Register</button>
     </form>
-    <footer>
-        <p>Developed by <a href='https://www.vtc.edu.hk/admission/en/programme/it114115-higher-diploma-in-cloud-and-data-centre-administration/'> Higher Diploma in Cloud and Data Centre Administration Team.</a></p>
-    </footer>
-</body>
-</html>";
-
-                    return new ContentResult()
-                    {
-                        Content = html,
-                        ContentType = "text/html",
-                        StatusCode = 200,
-                    };
+   ";
+                    return GetContentResult(form);
                 }
             }
             else if (req.Method == "POST")
             {
                 log.LogInformation("POST Request");
-
-                log.LogInformation("Form Submit");
                 string project = req.Form["project"];
                 string email = req.Form["email"];
                 string credentials = req.Form["credentials"];
                 log.LogInformation("Student Register: " + email + " Project:" + project);
                 if (string.IsNullOrWhiteSpace(project) || string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(credentials))
                 {
-                    return new ContentResult
-                    {
-                        Content = "Missing Data and Registration Failed",
-                        ContentType = "text/html",
-                        StatusCode = 200,
-                    };
+                    return GetContentResult("Missing Data and Registration Failed!");
                 }
 
                 var config = new ConfigurationBuilder()
@@ -117,19 +86,14 @@ namespace AzureAutomaticGradingEngineFunctionApp
                 var subscriptionTable = cloudTableClient.GetTableReference("subscriptions");
 
                 var credential = ReadToObject(credentials);
-                string subscriptionId = credential.subscriptionId;
+                var subscriptionId = credential.subscriptionId;
 
-                TableResult result = await subscriptionTable.ExecuteAsync(TableOperation.Retrieve(project, subscriptionId, new List<string>() { "Email" }));
+                var result = await subscriptionTable.ExecuteAsync(TableOperation.Retrieve<Subscription>(project, subscriptionId));
 
                 Console.WriteLine(result.Result);
-                if (result.Result != null)
+                if (result.Result != null && ((Subscription)result.Result).Email != email.ToLower().Trim())
                 {
-                    return new ContentResult
-                    {
-                        Content = "Duplicated Subscription Id",
-                        ContentType = "text/html",
-                        StatusCode = 200,
-                    };
+                    return GetContentResult("You can only have one Subscription Id for one assignment!");
                 }
                 var subscription = new Subscription()
                 {
@@ -137,27 +101,48 @@ namespace AzureAutomaticGradingEngineFunctionApp
                     RowKey = subscriptionId,
                     Email = email
                 };
-                await subscriptionTable.ExecuteAsync(TableOperation.Insert(subscription));
+                await subscriptionTable.ExecuteAsync(TableOperation.InsertOrReplace(subscription));
 
                 var projectCredential = new ProjectCredential()
                 {
                     PartitionKey = project,
-                    RowKey = email,
+                    RowKey = email.ToLower().Trim(),
                     Timestamp = DateTime.Now,
                     Credentials = credentials
                 };
                 await credentialsTable.ExecuteAsync(TableOperation.InsertOrReplace(projectCredential));
 
-
-                return new ContentResult
-                {
-                    Content = "Registered",
-                    ContentType = "text/html",
-                    StatusCode = 200,
-                };
+                return GetContentResult("Your credentials has been " + (result.Result != null ? "Updated!" : "Registered!"));
             }
 
             return new OkObjectResult("ok");
+        }
+
+        private static ContentResult GetContentResult(string content)
+        {
+            return new ContentResult
+            {
+                Content = GetHtml(content),
+                ContentType = "text/html",
+                StatusCode = 200,
+            };
+        }
+        private static string GetHtml(string content)
+        {
+            return $@"
+<!DOCTYPE html>
+<html lang='en' xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+    <meta charset='utf-8' />
+    <title>Azure Grader</title>
+</head>
+<body>
+    {content}
+    <footer>
+        <p>Developed by <a href='https://www.vtc.edu.hk/admission/en/programme/it114115-higher-diploma-in-cloud-and-data-centre-administration/'> Higher Diploma in Cloud and Data Centre Administration Team.</a></p>
+    </footer>
+</body>
+</html>";
         }
 
 

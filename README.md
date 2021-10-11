@@ -99,9 +99,11 @@ https://somethingunique.azurewebsites.net/api/StudentRegistrationFunction?projec
 <code>az account show</code>
 6.	Create SDK Auth, keep it privately and don't run this command again
 <code>az ad sp create-for-rbac -n "gradingengine" --sdk-auth</code>
-7.	Submit online registration form
+7.	Submit the online registration form.
+https://XXXXXX.azurewebsites.net/api/StudentRegistrationFunction?project=AssignmentName&email=abcd@stu.vtc.edu.hk
 
 Note: 
+
 1. Subscription ID must be unique for each assignment.
 2. Don't run <code>az ad sp create-for-rbac -n "gradingengine" --sdk-auth</code> repeatedly! If errors occur the educator/teacher will need to remove the students record in the subscription table and asks the student to resubmit the online form with the new/correct credentials.
 
