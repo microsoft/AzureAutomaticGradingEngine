@@ -103,8 +103,9 @@ https://somethingunique.azurewebsites.net/api/StudentRegistrationFunction?projec
 https://XXXXXX.azurewebsites.net/api/StudentRegistrationFunction?project=AssignmentName&email=abcd@stu.vtc.edu.hk
 
 Note: 
-1. Subscription ID and Email must be unique for each assignment.
-2. Don't run <code>az ad sp create-for-rbac -n "gradingengine" --sdk-auth</code> repeatedly! Students need to submit the online from again with the new credentials.
+
+1. Subscription ID must be unique for each assignment.
+2. Don't run <code>az ad sp create-for-rbac -n "gradingengine" --sdk-auth</code> repeatedly! If errors occur the educator/teacher will need to remove the students record in the subscription table and asks the student to resubmit the online form with the new/correct credentials.
 
 ## Quick test with AzureGraderConsoleRunner
 
