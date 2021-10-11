@@ -16,7 +16,6 @@ namespace AzureAutomaticGradingEngineFunctionApp.Model
     {
         public string GraderUrl { get; set; }
         public string TeacherEmail { get; set; }
-
         public bool? SendMarkEmailToStudents { get; set; }
     }
 
