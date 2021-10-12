@@ -1,23 +1,25 @@
 using System;
+using System.Diagnostics;
 using System.IO;
+using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
+using AzureAutomaticGradingEngineFunctionApp;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using NUnit.Common;
-using NUnitLite;
+using ExecutionContext = Microsoft.Azure.WebJobs.ExecutionContext;
 
-namespace AzureAutomaticGradingEngineFunctionApp
+namespace AzureProjectGraderFunctionApp
 {
-    public static class AzureGraderFunction
+    public static class GraderFunction
     {
-
         [FunctionName("AzureGraderFunction")]
         public static async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req,
-            ILogger log, ExecutionContext context)
+             [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req,
+             ILogger log, ExecutionContext context)
         {
             log.LogInformation("Start AzureGraderFunction");
 
@@ -41,7 +43,6 @@ namespace AzureAutomaticGradingEngineFunctionApp
         <br/>
         <button type='submit'>Run Test</button>
     </form>
-
 </body>
 </html>";
 
@@ -56,10 +57,20 @@ namespace AzureAutomaticGradingEngineFunctionApp
                 else
                 {
                     string credentials = req.Query["credentials"];
-                    string trace = req.Query["trace"];
-                    log.LogInformation("start:" + trace);
-                    var xml = await RunUnitTest(log, credentials);
-                    log.LogInformation("end:" + trace);
+
+                    string xml;
+                    if (req.Query.ContainsKey("trace"))
+                    {
+                        string trace = req.Query["trace"];
+                        string email = GradeReportFunction.ExtractEmail(trace);
+                        log.LogInformation("start:" + trace);
+                        xml = await RunUnitTestProcess(context, log, credentials, email);
+                        log.LogInformation("end:" + trace);
+                    }
+                    else
+                    {
+                        xml = await RunUnitTestProcess(context, log, credentials);
+                    }
                     return new ContentResult { Content = xml, ContentType = "application/xml", StatusCode = 200 };
                 }
 
@@ -67,8 +78,6 @@ namespace AzureAutomaticGradingEngineFunctionApp
             else if (req.Method == "POST")
             {
                 log.LogInformation("POST Request");
-
-                log.LogInformation("Form Submit");
                 string credentials = req.Form["credentials"];
                 if (credentials == null)
                 {
@@ -79,45 +88,106 @@ namespace AzureAutomaticGradingEngineFunctionApp
                         StatusCode = 422
                     };
                 }
-                var xml = await RunUnitTest(log, credentials);
+                var xml = await RunUnitTestProcess(context, log, credentials);
+
                 return new ContentResult { Content = xml, ContentType = "application/xml", StatusCode = 200 };
             }
 
             return new OkObjectResult("ok");
         }
 
-        private static async Task<string> RunUnitTest(ILogger log, string credentials)
+        private static async Task<string> RunUnitTestProcess(ExecutionContext context, ILogger log, string credentials, string trace = "NoTrace")
         {
-            var tempCredentialsFilePath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".json");
+            var tempDir = GetTemporaryDirectory(trace);
+            var tempCredentialsFilePath = Path.Combine(tempDir, "azureauth.json");
 
             await File.WriteAllLinesAsync(tempCredentialsFilePath, new string[] { credentials });
 
-            var tempDir = GetTemporaryDirectory();
+            string workingDirectoryInfo = context.FunctionAppDirectory;
+            string exeLocation = Path.Combine(context.FunctionAppDirectory, "AzureGraderTestProject.exe");
 
-            StringWriter strWriter = new StringWriter();
-            Environment.SetEnvironmentVariable("AzureAuthFilePath", tempCredentialsFilePath);
-            var autoRun = new AutoRun();
-            var returnCode = autoRun.Execute(new string[]{
-                           "/test:AzureGraderTest",
-                           "--work=" + tempDir
-                       }, new ExtendedTextWrapper(strWriter), Console.In);
-            log.LogInformation("AutoRun return code:" + returnCode);
-            var xml = await File.ReadAllTextAsync(Path.Combine(tempDir, "TestResult.xml"));
-            return xml;
+            try
+            {
+                using Process process = new Process();
+                ProcessStartInfo info = new ProcessStartInfo
+                {
+                    WorkingDirectory = workingDirectoryInfo,
+                    FileName = exeLocation,
+                    Arguments = $@"{tempCredentialsFilePath} {tempDir} {trace}",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
+                };
+
+                process.StartInfo = info;
+
+                log.LogInformation("Refresh start.");
+                process.Refresh();
+                log.LogInformation("Process start.");
+                var output = new StringBuilder();
+                var error = new StringBuilder();
+                using (AutoResetEvent outputWaitHandle = new AutoResetEvent(false))
+                using (AutoResetEvent errorWaitHandle = new AutoResetEvent(false))
+                {
+                    process.OutputDataReceived += (sender, e) =>
+                    {
+                        if (e.Data == null)
+                        {
+                            outputWaitHandle.Set();
+                        }
+                        else
+                        {
+                            output.AppendLine(e.Data);
+                        }
+                    };
+                    process.ErrorDataReceived += (sender, e) =>
+                    {
+                        if (e.Data == null)
+                        {
+                            errorWaitHandle.Set();
+                        }
+                        else
+                        {
+                            error.AppendLine(e.Data);
+                        }
+                    };
+                    process.Start();
+                    process.BeginOutputReadLine();
+                    process.BeginErrorReadLine();
+
+                    var timeout = 5 * 60 * 1000;
+                    if (process.WaitForExit(timeout) &&
+                        outputWaitHandle.WaitOne(timeout) &&
+                        errorWaitHandle.WaitOne(timeout))
+                    {
+                        // Process completed. Check process.ExitCode here.
+                        log.LogInformation("Process Ended.");
+
+                        log.LogInformation(error.ToString());
+                        var xml = await File.ReadAllTextAsync(Path.Combine(tempDir, "TestResult.xml"));
+                        Directory.Delete(tempDir, true);
+                        return xml;
+                    }
+                    else
+                    {
+                        // Timed out.
+                        log.LogInformation("Process Timed out.");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                log.LogError(ex.ToString());
+            }
+            return null;
         }
 
-        private static string GetTemporaryDirectory()
+        private static string GetTemporaryDirectory(string trace)
         {
-            string tempDirectory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+            string tempDirectory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName(), Math.Abs(trace.GetHashCode()).ToString());
             Directory.CreateDirectory(tempDirectory);
             return tempDirectory;
         }
-
-
-
     }
-
-
-
-
 }

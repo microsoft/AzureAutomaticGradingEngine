@@ -44,7 +44,9 @@ namespace AzureAutomaticGradingEngineFunctionApp
 
         [FunctionName("ManualRunScheduleGraderOrchestrationFunction")]
         public static async Task ManualGrader(
+#pragma warning disable IDE0060 // Remove unused parameter
             [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)] HttpRequest req, ILogger log, ExecutionContext context,
+#pragma warning restore IDE0060 // Remove unused parameter
             [DurableClient] IDurableOrchestrationClient starter
         )
         {
@@ -54,7 +56,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
 
         [FunctionName("ScheduleGraderOrchestrationFunction")]
         public static async Task RunOrchestrator(
-            [OrchestrationTrigger] IDurableOrchestrationContext context, ILogger log)
+            [OrchestrationTrigger] IDurableOrchestrationContext context)
         {
             var assignments = await context.CallActivityAsync<List<Assignment>>("GetAssignmentList", null);
 
@@ -67,9 +69,13 @@ namespace AzureAutomaticGradingEngineFunctionApp
 
             foreach (var classGradingJob in classJobs)
             {
+
+                // Parallel mode code is working due to Azure Function cannot run NUnit in parallel.
+                var gradingTasks = new Task[classGradingJob.students.Count];
+                var i = 0;
                 foreach (dynamic student in classGradingJob.students)
                 {
-                    await context.CallActivityAsync(
+                    gradingTasks[i] = context.CallActivityAsync<SingleGradingJob>(
                         "RunAndSaveTestResult",
                         new SingleGradingJob
                         {
@@ -77,24 +83,9 @@ namespace AzureAutomaticGradingEngineFunctionApp
                             graderUrl = classGradingJob.graderUrl,
                             student = student
                         });
+                    i++;
                 }
-
-                // Parallel mode code is working due to Azure Function cannot run NUnit in parallel.
-                //var gradingTasks = new Task<SingleGradingJob>[classGradingJob.students.Count];
-                //var i = 0;
-                //foreach (dynamic student in classGradingJob.students)
-                //{
-                //    gradingTasks[i] = context.CallActivityAsync<SingleGradingJob>(
-                //        "RunAndSaveTestResult",
-                //        new SingleGradingJob
-                //        {
-                //            assignment = classGradingJob.assignment,
-                //            graderUrl = classGradingJob.graderUrl,
-                //            student = student
-                //        });
-                //    i++;
-                //}
-                //await Task.WhenAll(gradingTasks);
+                await Task.WhenAll(gradingTasks);
             }
 
             var task2s = new Task[assignments.Count()];
@@ -112,8 +103,10 @@ namespace AzureAutomaticGradingEngineFunctionApp
 
 
         [FunctionName("GetAssignmentList")]
-        public static async Task<List<Assignment>> GetAssignmentList([ActivityTrigger] string name, ExecutionContext executionContext,
-    ILogger log)
+#pragma warning disable IDE0060 // Remove unused parameter
+        public static async Task<List<Assignment>> GetAssignmentList([ActivityTrigger] string name, ExecutionContext executionContext
+#pragma warning restore IDE0060 // Remove unused parameter
+    )
         {
             CloudStorageAccount storageAccount = CloudStorage.GetCloudStorageAccount(executionContext);
 
@@ -182,7 +175,9 @@ namespace AzureAutomaticGradingEngineFunctionApp
             CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
             CloudBlobContainer container = blobClient.GetContainerReference("testresult");
 
+#pragma warning disable IDE0017 // Simplify object initialization
             var client = new HttpClient();
+#pragma warning restore IDE0017 // Simplify object initialization
             client.Timeout = TimeSpan.FromMinutes(3);
             var queryPair = new NameValueCollection();
             queryPair.Set("credentials", job.student.credentials.ToString());
@@ -193,6 +188,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
             {
                 var watch = System.Diagnostics.Stopwatch.StartNew();
                 var xml = await client.GetStringAsync(uri);
+                
                 var now = DateTime.Now;
                 await SaveTestResult(container, job.assignment.Name, job.student.email.ToString(), xml, now);
                 if (job.assignment.SendMarkEmailToStudents)
@@ -221,7 +217,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
         private static async Task SaveTestResult(CloudBlobContainer container, string assignment, string email, string xml, DateTime now)
         {
             var filename = Regex.Replace(email, @"[^0-9a-zA-Z]+", "");
-            var blobName = string.Format(CultureInfo.InvariantCulture, assignment + "/" + email + "/{0:yyyy/MM/dd/HH/mm}/" + filename + ".content", now);
+            var blobName = string.Format(CultureInfo.InvariantCulture, assignment + "/" + email + "/{0:yyyy/MM/dd/HH/mm}/" + filename + ".xml", now);
             Console.WriteLine(blobName);
 
             CloudBlockBlob blob = container.GetBlockBlobReference(blobName);
@@ -291,7 +287,7 @@ Azure Automatic Grading Engine
             await SaveJsonReport(executionContext, blobName, todayMarks);
             blobName = assignment.Name + "/todayMarks.json";
             await SaveJsonReport(executionContext, blobName, todayMarks);
-            
+
             var workbookMemoryStream = new MemoryStream();
             GradeReportFunction.WriteWorkbookToMemoryStream(accumulatedMarks, workbookMemoryStream);
 
