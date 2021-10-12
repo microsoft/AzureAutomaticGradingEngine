@@ -2,7 +2,7 @@
 
 For any course testing Microsoft Azure, it is hard to assess or grade Azure projects manually. This project makes use of the technique of unit tests to grade students' Azure project settings automatically.
 
-This project has been developed by [Cyrus Wong]( https://www.linkedin.com/in/cyruswong) [Microsoft Learn Educator Ambassador](https://docs.microsoft.com/learn/roles/educator/learn-for-educators-overview) in Association with the [Microsoft Next Generation Developer Relations Team](https://techcommunity.microsoft.com/t5/educator-developer-blog/bg-p/EducatorDeveloperBlog?WT.mc_id=academic-39457-leestott).
+This project has been developed by [Cyrus Wong]( https://www.linkedin.com/in/cyruswong) [Microsoft Learn Educator Ambassador](https://docs.microsoft.com/learn/roles/educator/learn-for-educators-overview/?WT.mc_id=academic-39456-leestott) in Association with the [Microsoft Next Generation Developer Relations Team](https://techcommunity.microsoft.com/t5/educator-developer-blog/bg-p/EducatorDeveloperBlog?WT.mc_id=academic-39457-leestott).
 Project collaborators include [Chan Yiu Leung](https://www.linkedin.com/in/hadeschan/), [So Ka Chun](https://www.linkedin.com/in/so-ka-chun-0643971a5/), [Lo Chun Hei](https://www.linkedin.com/in/chunhei-lo-86a9301b5/), [Ling Po Chu](https://www.linkedin.com/in/po-chu-ling-88392b1b5/), [Cheung Ho Shing](https://www.linkedin.com/in/cheunghoshing/) and [Pearly Law](https://www.linkedin.com/in/mei-ching-pearly-jean-law-172707171/) from the IT114115 Higher Diploma in Cloud and Data Centre Administration.
 
 The project is being validated through usage on the course [Higher Diploma in Cloud and Data Centre Administration](https://www.vtc.edu.hk/admission/en/programme/it114115-higher-diploma-in-cloud-and-data-centre-administration/)
@@ -22,7 +22,7 @@ You can read more about this project at [Microsoft Educator Developer TechCommun
 
 Azure Resource Manager templates (ARM templates) are used as an easy way to deploy services to Azure. 
 
-If you are interested in learning more about ARM see the following Microsoft Learn Module [Deploy and manage resource manager templates] (https://docs.microsoft.com/learn/paths/deploy-manage-resource-manager-templates/). In this module you will learn about the structure of the template and the tools you will need for working with templates. If you want to learn about the benefits of using templates and why you should automate deployment with templates, see the ARM template overview (https://docs.microsoft.com/azure/azure-resource-manager/templates/overview). 
+If you are interested in learning more about ARM see the following Microsoft Learn Module [Deploy and manage resource manager templates](https://docs.microsoft.com/learn/paths/deploy-manage-resource-manager-templates/). In this module you will learn about the structure of the template and the tools you will need for working with templates. If you want to learn about the benefits of using templates and why you should automate deployment with templates, see the [ARM template overview](https://docs.microsoft.com/azure/azure-resource-manager/templates/overview). 
 
 ## To deploy, click the `Deploy to Azure` button 
 
@@ -125,8 +125,7 @@ Or update \repos\AzureGraderTestProject\AzureGraderTestProject\Config.cs
 
 ## Scheduler Grader
 
-The scheduler is set to run every 12 hours by default and you can change the TimerTrigger expression.
-https://github.com/microsoft/AzureAutomaticGradingEngine/blob/master/AzureAutomaticGradingEngineFunctionApp/ScheduleGraderFunction.cs 
+The scheduler is set to run every 12 hours by default and you can change the [TimerTrigger expression](https://github.com/microsoft/AzureAutomaticGradingEngine/blob/main/AzureAutomaticGradingEngineFunctionApp/ScheduleGraderFunction.cs)
 
 testresult: saves Nunit xml test result.
 
