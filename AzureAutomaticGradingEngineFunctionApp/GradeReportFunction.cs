@@ -129,28 +129,28 @@ namespace AzureAutomaticGradingEngineFunctionApp
             }
         }
 
-        private static string ExtractEmail(string url)
+        public static string ExtractEmail(string content)
         {
-            const string MatchEmailPattern =
+            const string matchEmailPattern =
   @"(([\w-]+\.)+[\w-]+|([a-zA-Z]{1}|[\w-]{2,}))@"
   + @"((([0-1]?[0-9]{1,2}|25[0-5]|2[0-4][0-9])\.([0-1]?[0-9]{1,2}|25[0-5]|2[0-4][0-9])\."
   + @"([0-1]?[0-9]{1,2}|25[0-5]|2[0-4][0-9])\.([0-1]?[0-9]{1,2}|25[0-5]|2[0-4][0-9])){1}|"
   + @"([a-zA-Z]+[\w-]+\.)+[a-zA-Z]{2,4})";
 
             Regex rx = new Regex(
-              MatchEmailPattern,
+              matchEmailPattern,
               RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
             // Find matches.
-            MatchCollection matches = rx.Matches(url);
+            MatchCollection matches = rx.Matches(content);
 
-            return matches[0].Value.ToString();
+            return matches[0].Value;
 
         }
 
         private static Dictionary<string, int> GetTestResult(CloudBlobContainer cloudBlobContainer, IListBlobItem item)
         {
-            var blobName = item.Uri.ToString().Substring(cloudBlobContainer.Uri.ToString().Length + 1);
+            var blobName = item.Uri.ToString()[(cloudBlobContainer.Uri.ToString().Length + 1)..];
             CloudBlockBlob blob = cloudBlobContainer.GetBlockBlobReference(blobName);
 
             string rawXml = blob.DownloadTextAsync().Result;
@@ -177,7 +177,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
 
         private static DateTime GetTestTime(CloudBlobContainer cloudBlobContainer, IListBlobItem item)
         {
-            var blobName = item.Uri.ToString().Substring(cloudBlobContainer.Uri.ToString().Length + 1);
+            var blobName = item.Uri.ToString()[(cloudBlobContainer.Uri.ToString().Length + 1)..];
             CloudBlockBlob blob = cloudBlobContainer.GetBlockBlobReference(blobName);
             var task = blob.FetchAttributesAsync();
             task.Wait();

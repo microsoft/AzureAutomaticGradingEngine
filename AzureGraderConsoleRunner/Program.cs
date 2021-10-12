@@ -9,7 +9,7 @@ namespace AzureGraderConsoleRunner
     class Program
     {
 
-        static void Main(string[] args)
+        static void Main()
         {
             string path = Directory.GetCurrentDirectory();
             Console.WriteLine(path);

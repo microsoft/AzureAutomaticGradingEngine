@@ -30,11 +30,6 @@ namespace AzureGraderTestProject
             Console.WriteLine(xml);
             return 0;
         }
-        private static string GetTemporaryDirectory(string trace)
-        {
-            string tempDirectory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName(), Math.Abs(trace.GetHashCode()).ToString());
-            Directory.CreateDirectory(tempDirectory);
-            return tempDirectory;
-        }
+
     }
 }

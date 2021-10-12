@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using AzureAutomaticGradingEngineFunctionApp;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
@@ -61,8 +62,9 @@ namespace AzureProjectGraderFunctionApp
                     if (req.Query.ContainsKey("trace"))
                     {
                         string trace = req.Query["trace"];
+                        string email = GradeReportFunction.ExtractEmail(trace);
                         log.LogInformation("start:" + trace);
-                        xml = await RunUnitTestProcess(context, log, credentials, trace);
+                        xml = await RunUnitTestProcess(context, log, credentials, email);
                         log.LogInformation("end:" + trace);
                     }
                     else

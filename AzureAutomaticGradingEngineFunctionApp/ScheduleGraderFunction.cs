@@ -44,7 +44,9 @@ namespace AzureAutomaticGradingEngineFunctionApp
 
         [FunctionName("ManualRunScheduleGraderOrchestrationFunction")]
         public static async Task ManualGrader(
+#pragma warning disable IDE0060 // Remove unused parameter
             [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)] HttpRequest req, ILogger log, ExecutionContext context,
+#pragma warning restore IDE0060 // Remove unused parameter
             [DurableClient] IDurableOrchestrationClient starter
         )
         {
@@ -54,7 +56,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
 
         [FunctionName("ScheduleGraderOrchestrationFunction")]
         public static async Task RunOrchestrator(
-            [OrchestrationTrigger] IDurableOrchestrationContext context, ILogger log)
+            [OrchestrationTrigger] IDurableOrchestrationContext context)
         {
             var assignments = await context.CallActivityAsync<List<Assignment>>("GetAssignmentList", null);
 
@@ -69,7 +71,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
             {
 
                 // Parallel mode code is working due to Azure Function cannot run NUnit in parallel.
-                var gradingTasks = new Task<SingleGradingJob>[classGradingJob.students.Count];
+                var gradingTasks = new Task[classGradingJob.students.Count];
                 var i = 0;
                 foreach (dynamic student in classGradingJob.students)
                 {
@@ -101,8 +103,10 @@ namespace AzureAutomaticGradingEngineFunctionApp
 
 
         [FunctionName("GetAssignmentList")]
-        public static async Task<List<Assignment>> GetAssignmentList([ActivityTrigger] string name, ExecutionContext executionContext,
-    ILogger log)
+#pragma warning disable IDE0060 // Remove unused parameter
+        public static async Task<List<Assignment>> GetAssignmentList([ActivityTrigger] string name, ExecutionContext executionContext
+#pragma warning restore IDE0060 // Remove unused parameter
+    )
         {
             CloudStorageAccount storageAccount = CloudStorage.GetCloudStorageAccount(executionContext);
 
@@ -171,7 +175,9 @@ namespace AzureAutomaticGradingEngineFunctionApp
             CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
             CloudBlobContainer container = blobClient.GetContainerReference("testresult");
 
+#pragma warning disable IDE0017 // Simplify object initialization
             var client = new HttpClient();
+#pragma warning restore IDE0017 // Simplify object initialization
             client.Timeout = TimeSpan.FromMinutes(3);
             var queryPair = new NameValueCollection();
             queryPair.Set("credentials", job.student.credentials.ToString());
