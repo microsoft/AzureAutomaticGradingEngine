@@ -50,7 +50,10 @@
 		<Folder Include="Properties\PublishProfiles\" />
 		<Folder Include="Properties\ServiceDependencies\" />
 	</ItemGroup>
-	<Target Name="PreBuild" BeforeTargets="PreBuildEvent">
-		<Exec Command="cd $(SolutionDir)\AzureGraderTestProject\&#xD;&#xA;dotnet publish -r win-x64 -c Release &#xD;&#xA;copy bin\Release\netcoreapp3.1\win-x64\publish\AzureGraderTestProject.exe $(ProjectDir)" />
+	<Target Name="PreBuild" BeforeTargets="PreBuildEvent" Condition=" '$(OS)' != 'Unix' " >
+		<Exec Command="cd $(SolutionDir)\AzureGraderTestProject\&#xD;&#xA;dotnet publish -r win-x64 -c Release &#xD;&#xA;xcopy bin\Release\netcoreapp3.1\win-x64\publish\AzureGraderTestProject.exe $(ProjectDir)" />
+	</Target>
+	<Target Name="PreBuild" BeforeTargets="PreBuildEvent" Condition=" '$(OS)' == 'Unix' " >
+		<Exec Command="cd $(SolutionDir)/AzureGraderTestProject/&#xD;&#xA;dotnet publish -r win-x64 -c Release &#xD;&#xA;cp bin/Release/netcoreapp3.1/win-x64/publish/AzureGraderTestProject.exe $(ProjectDir)" />
 	</Target>
 </Project>
