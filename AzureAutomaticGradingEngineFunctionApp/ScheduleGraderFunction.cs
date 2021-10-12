@@ -67,9 +67,13 @@ namespace AzureAutomaticGradingEngineFunctionApp
 
             foreach (var classGradingJob in classJobs)
             {
+
+                // Parallel mode code is working due to Azure Function cannot run NUnit in parallel.
+                var gradingTasks = new Task<SingleGradingJob>[classGradingJob.students.Count];
+                var i = 0;
                 foreach (dynamic student in classGradingJob.students)
                 {
-                    await context.CallActivityAsync(
+                    gradingTasks[i] = context.CallActivityAsync<SingleGradingJob>(
                         "RunAndSaveTestResult",
                         new SingleGradingJob
                         {
@@ -77,24 +81,9 @@ namespace AzureAutomaticGradingEngineFunctionApp
                             graderUrl = classGradingJob.graderUrl,
                             student = student
                         });
+                    i++;
                 }
-
-                // Parallel mode code is working due to Azure Function cannot run NUnit in parallel.
-                //var gradingTasks = new Task<SingleGradingJob>[classGradingJob.students.Count];
-                //var i = 0;
-                //foreach (dynamic student in classGradingJob.students)
-                //{
-                //    gradingTasks[i] = context.CallActivityAsync<SingleGradingJob>(
-                //        "RunAndSaveTestResult",
-                //        new SingleGradingJob
-                //        {
-                //            assignment = classGradingJob.assignment,
-                //            graderUrl = classGradingJob.graderUrl,
-                //            student = student
-                //        });
-                //    i++;
-                //}
-                //await Task.WhenAll(gradingTasks);
+                await Task.WhenAll(gradingTasks);
             }
 
             var task2s = new Task[assignments.Count()];
@@ -193,6 +182,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
             {
                 var watch = System.Diagnostics.Stopwatch.StartNew();
                 var xml = await client.GetStringAsync(uri);
+                
                 var now = DateTime.Now;
                 await SaveTestResult(container, job.assignment.Name, job.student.email.ToString(), xml, now);
                 if (job.assignment.SendMarkEmailToStudents)
@@ -221,7 +211,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
         private static async Task SaveTestResult(CloudBlobContainer container, string assignment, string email, string xml, DateTime now)
         {
             var filename = Regex.Replace(email, @"[^0-9a-zA-Z]+", "");
-            var blobName = string.Format(CultureInfo.InvariantCulture, assignment + "/" + email + "/{0:yyyy/MM/dd/HH/mm}/" + filename + ".content", now);
+            var blobName = string.Format(CultureInfo.InvariantCulture, assignment + "/" + email + "/{0:yyyy/MM/dd/HH/mm}/" + filename + ".xml", now);
             Console.WriteLine(blobName);
 
             CloudBlockBlob blob = container.GetBlockBlobReference(blobName);
@@ -291,7 +281,7 @@ Azure Automatic Grading Engine
             await SaveJsonReport(executionContext, blobName, todayMarks);
             blobName = assignment.Name + "/todayMarks.json";
             await SaveJsonReport(executionContext, blobName, todayMarks);
-            
+
             var workbookMemoryStream = new MemoryStream();
             GradeReportFunction.WriteWorkbookToMemoryStream(accumulatedMarks, workbookMemoryStream);
 
