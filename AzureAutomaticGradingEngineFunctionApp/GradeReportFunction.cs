@@ -150,9 +150,19 @@ namespace AzureAutomaticGradingEngineFunctionApp
         private static Dictionary<string, int> GetTestResult(CloudBlobContainer cloudBlobContainer, IListBlobItem item)
         {
             var xmlDoc = LoadTestResultToXmlDocument(cloudBlobContainer, item);
+            return ParseNUnitTestResult(xmlDoc);
+        }
 
-            XmlNodeList testCases = xmlDoc.SelectNodes("/test-run/test-suite/test-suite/test-suite/test-case");
+        public static Dictionary<string, int> ParseNUnitTestResult(string rawXml)
+        {
+            XmlDocument xmlDoc = new XmlDocument();
+            xmlDoc.LoadXml(rawXml);
+            return ParseNUnitTestResult(xmlDoc);
+        }
 
+        private static Dictionary<string, int> ParseNUnitTestResult(XmlDocument xmlDoc)
+        {
+            var testCases = xmlDoc.SelectNodes("/test-run/test-suite/test-suite/test-suite/test-case");
             var result = new Dictionary<string, int>();
             foreach (XmlNode node in testCases)
             {
@@ -161,6 +171,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
 
             return result;
         }
+
         private static DateTime GetTestTime(CloudBlobContainer cloudBlobContainer, IListBlobItem item)
         {
             var xmlDoc = LoadTestResultToXmlDocument(cloudBlobContainer, item);
