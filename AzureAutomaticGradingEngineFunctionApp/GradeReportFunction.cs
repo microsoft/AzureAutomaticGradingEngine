@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -31,12 +30,12 @@ namespace AzureAutomaticGradingEngineFunctionApp
             bool isToday = req.Query.ContainsKey("today");
 
             var accumulateMarks = await CalculateMarks(log, context, assignment, isToday);
-            
+
             if (isJson)
             {
                 return new JsonResult(accumulateMarks);
             }
-            
+
             try
             {
                 await using var stream = new MemoryStream();
@@ -150,26 +149,24 @@ namespace AzureAutomaticGradingEngineFunctionApp
 
         private static Dictionary<string, int> GetTestResult(CloudBlobContainer cloudBlobContainer, IListBlobItem item)
         {
-            var blobName = item.Uri.ToString()[(cloudBlobContainer.Uri.ToString().Length + 1)..];
-            CloudBlockBlob blob = cloudBlobContainer.GetBlockBlobReference(blobName);
-
-            string rawXml = blob.DownloadTextAsync().Result;
-            var result = ParseNUnitTestResult(rawXml);
-
-            return result;
+            var xmlDoc = LoadTestResultToXmlDocument(cloudBlobContainer, item);
+            return ParseNUnitTestResult(xmlDoc);
         }
 
         public static Dictionary<string, int> ParseNUnitTestResult(string rawXml)
         {
             XmlDocument xmlDoc = new XmlDocument();
             xmlDoc.LoadXml(rawXml);
+            return ParseNUnitTestResult(xmlDoc);
+        }
 
-            XmlNodeList testCases = xmlDoc.SelectNodes("/test-run/test-suite/test-suite/test-suite/test-case");
-
+        private static Dictionary<string, int> ParseNUnitTestResult(XmlDocument xmlDoc)
+        {
+            var testCases = xmlDoc.SelectNodes("/test-run/test-suite/test-suite/test-suite/test-case");
             var result = new Dictionary<string, int>();
             foreach (XmlNode node in testCases)
             {
-                result.Add(node.Attributes["fullname"].Value, node.Attributes["result"].Value == "Passed" ? 1 : 0);
+                result.Add(node.Attributes?["fullname"].Value, node.Attributes?["result"].Value == "Passed" ? 1 : 0);
             }
 
             return result;
@@ -177,12 +174,22 @@ namespace AzureAutomaticGradingEngineFunctionApp
 
         private static DateTime GetTestTime(CloudBlobContainer cloudBlobContainer, IListBlobItem item)
         {
+            var xmlDoc = LoadTestResultToXmlDocument(cloudBlobContainer, item);
+            //ISO 8601 pattern "2021-10-02T10:01:57.1589935Z"
+            var testStartTime = DateTime.Parse(xmlDoc.SelectSingleNode("/test-run")?.Attributes?["start-time"].Value);
+            //Ignore Second.
+            testStartTime = testStartTime.AddSeconds(-testStartTime.Second);
+            return testStartTime;
+        }
+
+        private static XmlDocument LoadTestResultToXmlDocument(CloudBlobContainer cloudBlobContainer, IListBlobItem item)
+        {
             var blobName = item.Uri.ToString()[(cloudBlobContainer.Uri.ToString().Length + 1)..];
-            CloudBlockBlob blob = cloudBlobContainer.GetBlockBlobReference(blobName);
-            var task = blob.FetchAttributesAsync();
-            task.Wait();
-            Debug.Assert(blob.Properties.Created != null, "blob.Properties.Created != null");
-            return blob.Properties.Created.Value.DateTime;
+            var blob = cloudBlobContainer.GetBlockBlobReference(blobName);
+            string rawXml = blob.DownloadTextAsync().Result;
+            var xmlDoc = new XmlDocument();
+            xmlDoc.LoadXml(rawXml);
+            return xmlDoc;
         }
     }
 }

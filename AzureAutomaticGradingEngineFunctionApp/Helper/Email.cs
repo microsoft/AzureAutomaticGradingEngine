@@ -1,4 +1,5 @@
-﻿using System.Net.Mail;
+﻿using System.IO;
+using System.Net.Mail;
 using AzureAutomaticGradingEngineFunctionApp.Model;
 using Microsoft.Extensions.Logging;
 
@@ -53,6 +54,16 @@ namespace AzureAutomaticGradingEngineFunctionApp.Helper
             
             _client.Send(message);
             _log.LogInformation("Sent email to " + email.To);
+        }
+
+        public static Attachment StringToAttachment(string content, string name, string mediaType)
+        {
+            using var ms = new MemoryStream();
+            using var writer = new StreamWriter(ms, leaveOpen: true);
+            writer.Write(content);
+            writer.Flush();
+            ms.Position = 0;
+            return new Attachment(new MemoryStream(ms.ToArray()), name, mediaType);
         }
     }
 }

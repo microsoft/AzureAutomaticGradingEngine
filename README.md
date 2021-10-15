@@ -46,17 +46,8 @@ You have to set the App Settings Key during deployment or in the Azure Portal. I
 
 
 ## Deploy the Demo Assignment Project
+Please visit [Azure Automatic Grading Engine - Classroom Assignments samples](https://github.com/microsoft/AzureAutomaticGradingEngine_Assignments)
 
-This is a sample example where we can validate if students have successfully deployed a Azure VNET within a Azure Resource Group called IT114115.
-
-As an educator you will need to provide fixed names for resources which you expect students to create within their Azure subscriptions.
-
-In this example we expect students to create a simple VNET ARM and a resource group named IT114115
-
-Students could use a prebuilt Azure ARM Template from the [Azure Quick Start Templates Gallery](https://azure.microsoft.com/resources/templates?WT.mc_id=academic-39456-leestott) such as the [Virtual Network Quick Create Template](https://docs.microsoft.com/azure/virtual-network/quick-create-template?WT.mc_id=academic-39456-leestott)
-
-For the test details, check
-https://github.com/microsoft/AzureAutomaticGradingEngine/blob/master/AzureAutomaticGradingEngineFunctionApp/AzureGraderTest/VnetUnitTest.cs
 
 ## Supporting Environment
 
@@ -69,9 +60,9 @@ This service is tested with [Azure for student subscription](http://aka.ms/azure
 You need to add a Entity in assignments table.
 Partition Key: assignment or project name such as it114115
 Properties:
-"GraderUrl":  The grader HTTP Url 
-"TeacherEmail":  Teacher Email for class grade report. (Optional)
-"SendMarkEmailToStudents": This is a type boolean, set it to true if you want to send the mark report to students via an email. If this email property does not exist or the item is set to false, the email will not be sent.
+1. "GraderUrl":  The grader HTTP Url 
+2. "TeacherEmail":  Teacher Email for class grade report. (Optional)
+3. "SendMarkEmailToStudents": This is a type boolean, set it to true if you want to send the mark report to students via an email. If this email property does not exist or the item is set to false, the email will not be sent.
 
 ![Assignment](./images/AssignmentTableRecord.png)
 
