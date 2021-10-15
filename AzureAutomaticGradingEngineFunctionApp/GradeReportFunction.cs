@@ -31,12 +31,12 @@ namespace AzureAutomaticGradingEngineFunctionApp
             bool isToday = req.Query.ContainsKey("today");
 
             var accumulateMarks = await CalculateMarks(log, context, assignment, isToday);
-            
+
             if (isJson)
             {
                 return new JsonResult(accumulateMarks);
             }
-            
+
             try
             {
                 await using var stream = new MemoryStream();
@@ -179,10 +179,14 @@ namespace AzureAutomaticGradingEngineFunctionApp
         {
             var blobName = item.Uri.ToString()[(cloudBlobContainer.Uri.ToString().Length + 1)..];
             CloudBlockBlob blob = cloudBlobContainer.GetBlockBlobReference(blobName);
-            var task = blob.FetchAttributesAsync();
-            task.Wait();
-            Debug.Assert(blob.Properties.Created != null, "blob.Properties.Created != null");
-            return blob.Properties.Created.Value.DateTime;
+            string rawXml = blob.DownloadTextAsync().Result;
+            XmlDocument xmlDoc = new XmlDocument();
+            xmlDoc.LoadXml(rawXml);
+            //ISO 8601 pattern "2021-10-02T10:01:57.1589935Z"
+            var testStartTime = DateTime.Parse(xmlDoc.SelectSingleNode("/test-run")?.Attributes["start-time"].Value);
+            //Ignore Second.
+            testStartTime = testStartTime.AddSeconds(-testStartTime.Second);
+            return testStartTime;
         }
     }
 }
