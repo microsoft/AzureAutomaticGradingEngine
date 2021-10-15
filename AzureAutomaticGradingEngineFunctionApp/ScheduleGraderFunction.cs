@@ -18,10 +18,8 @@ using System.Threading.Tasks;
 using System.Web;
 using AzureAutomaticGradingEngineFunctionApp.Helper;
 using AzureAutomaticGradingEngineFunctionApp.Model;
-using DocumentFormat.OpenXml.Spreadsheet;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.WindowsAzure.Storage.Queue;
 
 namespace AzureAutomaticGradingEngineFunctionApp
 {

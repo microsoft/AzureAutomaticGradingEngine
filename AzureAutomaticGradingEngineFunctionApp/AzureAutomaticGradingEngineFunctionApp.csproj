@@ -13,10 +13,7 @@
 		<PackageReference Include="Microsoft.Azure.WebJobs.Extensions.DurableTask" Version="2.5.1" />
 		<PackageReference Include="Microsoft.Azure.WebJobs.Extensions.Storage" Version="3.0.10" />
 		<PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="3.1.13" />
-		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.11.0" />
-		<PackageReference Include="NUnit" Version="3.13.2" />
 		<PackageReference Include="Microsoft.NET.Sdk.Functions" Version="3.0.13" />
-		<PackageReference Include="NUnitLite" Version="3.13.2" />
 	</ItemGroup>
 	<ItemGroup>
 		<Resource Include=".gitignore" />
@@ -50,10 +47,4 @@
 		<Folder Include="Properties\PublishProfiles\" />
 		<Folder Include="Properties\ServiceDependencies\" />
 	</ItemGroup>
-	<Target Name="PreBuild" BeforeTargets="PreBuildEvent" Condition=" '$(OS)' != 'Unix' " >
-		<Exec Command="cd $(SolutionDir)\AzureGraderTestProject\&#xD;&#xA;dotnet publish -r win-x64 -c Release &#xD;&#xA;xcopy bin\Release\netcoreapp3.1\win-x64\publish\AzureGraderTestProject.exe $(ProjectDir)" />
-	</Target>
-	<Target Name="PreBuild" BeforeTargets="PreBuildEvent" Condition=" '$(OS)' == 'Unix' " >
-		<Exec Command="cd $(SolutionDir)/AzureGraderTestProject/&#xD;&#xA;dotnet publish -r win-x64 -c Release &#xD;&#xA;cp bin/Release/netcoreapp3.1/win-x64/publish/AzureGraderTestProject.exe $(ProjectDir)" />
-	</Target>
 </Project>

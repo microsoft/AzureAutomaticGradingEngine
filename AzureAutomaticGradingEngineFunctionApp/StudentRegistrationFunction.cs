@@ -144,12 +144,5 @@ namespace AzureAutomaticGradingEngineFunctionApp
 </body>
 </html>";
         }
-
-
-
     }
-
-
-
-
 }
