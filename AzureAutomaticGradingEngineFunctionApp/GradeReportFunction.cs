@@ -12,7 +12,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
-using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace AzureAutomaticGradingEngineFunctionApp
@@ -59,9 +58,9 @@ namespace AzureAutomaticGradingEngineFunctionApp
 
         public static async Task<Dictionary<string, Dictionary<string, int>>> CalculateMarks(ILogger log, ExecutionContext context, string assignment, bool isToday)
         {
-            CloudStorageAccount storageAccount = CloudStorage.GetCloudStorageAccount(context);
-            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
-            CloudBlobContainer container = blobClient.GetContainerReference("testresult");
+            var storageAccount = CloudStorage.GetCloudStorageAccount(context);
+            var blobClient = storageAccount.CreateCloudBlobClient();
+            var container = blobClient.GetContainerReference("testresult");
 
             var blobItems = await CloudStorage.ListBlobsFlatListing(container, assignment, log);
 

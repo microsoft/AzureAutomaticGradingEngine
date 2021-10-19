@@ -11,12 +11,7 @@ The project is being validated through usage on the course [Higher Diploma in Cl
 
 ![Architecture](./images/GraderArchitecture.png)
 
-You can read more about this project at [Microsoft Educator Developer TechCommunity](https://techcommunity.microsoft.com/t5/educator-developer-blog/microsoft-azure-automatic-grading-engine/ba-p/2681809?WT.mc_id=academic-39457-leestott)
-
-## Prerequisite
-
-- A single Azure Storage account with 1 Resource group and 2 containers
-- Containers need to be named `testresult` and `credentials` with the resource group name `azureautomaticgradingengine`.
+You can read more about this project at [Microsoft Educator Developer TechCommunity](https://techcommunity.microsoft.com/t5/educator-developer-blog/microsoft-azure-automatic-grading-engine-oct-2021-update/ba-p/2849141?WT.mc_id=academic-39457-leestott)
 
 ## ARM Deployment 
 
@@ -119,7 +114,7 @@ Or update \repos\AzureGraderTestProject\AzureGraderTestProject\Config.cs
 The scheduler is set to run every 12 hours by default and you can change the TimerTrigger expression.
 https://github.com/microsoft/AzureAutomaticGradingEngine/blob/master/AzureAutomaticGradingEngineFunctionApp/ScheduleGraderFunction.cs 
 
-testresult: saves Nunit xml test result.
+testResults: saves Nunit xml test result.
 
 ## Generate the Prebuilt package
 

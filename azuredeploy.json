@@ -23,7 +23,7 @@
       }
     },
     "EmailPassword": {
-      "type": "string",
+      "type": "securestring",
       "defaultValue": "",
       "metadata": {
         "description": "Email Password."
@@ -36,13 +36,23 @@
         "description": "Email Sender address."
       }
     },
-    "location": {
+    "environment": {
       "type": "string",
-      "defaultValue": "[resourceGroup().location]",
+      "defaultValue": "[resourceGroup().name]",
       "metadata": {
-        "description": "Specifies the location in which the Azure Storage resources should be deployed."
+        "description": "Name of Environment"
+      }
+    },
+    "package": {
+      "type": "string",
+      "defaultValue": "https://github.com/microsoft/AzureAutomaticGradingEngine/raw/master/Prebuilt/AzureAutomaticGradingEngineFunctionApp.zip",
+      "metadata": {
+        "description": "Azure Function zip package."
       }
     }
+  },
+  "variables": {
+    "location": "[resourceGroup().location]"
   },
   "resources": [
     {
@@ -50,7 +60,7 @@
       "name": "[parameters('uniqueName')]",
       "type": "Microsoft.Web/sites",
       "kind": "functionapp",
-      "location": "[parameters('location')]",
+      "location": "[variables('location')]",
       "tags": {},
       "dependsOn": [
         "[concat('microsoft.insights/components/', parameters('uniqueName'))]",
@@ -103,6 +113,10 @@
             {
               "name": "EmailFromAddress",
               "value": "[parameters('EmailFromAddress')]"
+            },
+            {
+              "name": "Environment",
+              "value": "[parameters('environment')]"
             }
           ]
         },
@@ -114,7 +128,7 @@
       "apiVersion": "2015-05-01",
       "name": "[parameters('uniqueName')]",
       "type": "microsoft.insights/components",
-      "location": "[parameters('location')]",
+      "location": "[variables('location')]",
       "tags": {},
       "properties": {
         "ApplicationId": "[parameters('uniqueName')]",
@@ -125,7 +139,7 @@
       "type": "Microsoft.Storage/storageAccounts",
       "apiVersion": "2019-06-01",
       "name": "[parameters('uniqueName')]",
-      "location": "[parameters('location')]",
+      "location": "[variables('location')]",
       "sku": {
         "name": "Standard_LRS",
         "tier": "Standard"

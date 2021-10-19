@@ -18,7 +18,8 @@ namespace AzureAutomaticGradingEngineFunctionApp.Helper
             EmailSmtp,
             EmailUserName,
             EmailPassword,
-            EmailFromAddress
+            EmailFromAddress,
+            Environment
         };
 
         public string GetConfig( Key key)
@@ -30,7 +31,6 @@ namespace AzureAutomaticGradingEngineFunctionApp.Helper
                 .Build();
 
             var name = Enum.GetName(typeof(Key), key);
-
             return config[name];
         }
     }
