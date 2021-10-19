@@ -80,7 +80,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
                 var i = 0;
                 foreach (dynamic student in classGradingJob.students)
                 {
-                    gradingTasks[i] = context.CallActivityAsync<SingleGradingJob>(
+                    gradingTasks[i] = context.CallActivityAsync(
                         "RunAndSaveTestResult",
                         new SingleGradingJob
                         {

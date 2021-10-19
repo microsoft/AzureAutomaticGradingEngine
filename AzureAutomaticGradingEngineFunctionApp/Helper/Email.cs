@@ -10,6 +10,7 @@ namespace AzureAutomaticGradingEngineFunctionApp.Helper
         private readonly ILogger _log;
         private readonly SmtpClient _client;
         private readonly string _fromAddress;
+        private readonly string _environment;
 
         public Email(Config config, ILogger log)
         {
@@ -21,6 +22,7 @@ namespace AzureAutomaticGradingEngineFunctionApp.Helper
             var loginName = config.GetConfig(Config.Key.EmailUserName);
             var password = config.GetConfig(Config.Key.EmailPassword);
             _fromAddress = config.GetConfig(Config.Key.EmailFromAddress);
+            _environment = config.GetConfig(Config.Key.Environment);
 
             if (string.IsNullOrEmpty(smtp) || string.IsNullOrEmpty(loginName) || string.IsNullOrEmpty(password) || string.IsNullOrEmpty(_fromAddress))
             {
@@ -42,7 +44,9 @@ namespace AzureAutomaticGradingEngineFunctionApp.Helper
                 _log.LogInformation("Skipped Missing SMTP Settings in App Settings: " + email.To);
                 return;
             }
-            var message = new MailMessage(_fromAddress, email.To, email.Subject, email.Body);
+
+            var body = email.Body + "\n\n environment:" + _environment;
+            var message = new MailMessage(_fromAddress, email.To, email.Subject, body);
 
             if (attachments != null)
             {
@@ -51,7 +55,7 @@ namespace AzureAutomaticGradingEngineFunctionApp.Helper
                     message.Attachments.Add(attachment);
                 }
             }
-            
+
             _client.Send(message);
             _log.LogInformation("Sent email to " + email.To);
         }
