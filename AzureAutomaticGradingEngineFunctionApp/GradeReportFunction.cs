@@ -18,7 +18,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
 {
     public static class GradeReportFunction
     {
-        [FunctionName("GradeReportFunction")]
+        [FunctionName(nameof(GradeReportFunction))]
         public static async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = null)] HttpRequest req, ILogger log, ExecutionContext context)
         {
