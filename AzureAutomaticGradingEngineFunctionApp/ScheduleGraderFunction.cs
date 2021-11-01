@@ -26,7 +26,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
 {
     public static class ScheduleGraderFunction
     {
-        [FunctionName("ScheduleGrader")]
+        [FunctionName(nameof(ScheduleGrader))]
         public static async Task ScheduleGrader(
             [TimerTrigger("0 */5 * * * *")] TimerInfo myTimer,
             [DurableClient] IDurableOrchestrationClient starter,
@@ -40,7 +40,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
             log.LogInformation($"Started orchestration with ID = '{instanceId}'.");
         }
 
-        [FunctionName("ManualRunGraderOrchestrationFunction")]
+        [FunctionName(nameof(ManualRunGraderOrchestrationFunction))]
         public static async Task<IActionResult> ManualRunGraderOrchestrationFunction(
 #pragma warning disable IDE0060 // Remove unused parameter
             [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)] HttpRequest req, ILogger log, ExecutionContext context,
@@ -59,11 +59,11 @@ namespace AzureAutomaticGradingEngineFunctionApp
             };
         }
 
-        [FunctionName("GraderOrchestrationFunction")]
+        [FunctionName(nameof(GraderOrchestrationFunction))]
         public static async Task GraderOrchestrationFunction(
             [OrchestrationTrigger] IDurableOrchestrationContext context)
         {
-            var assignments = await context.CallActivityAsync<List<Assignment>>("GetAssignmentList", null);
+            var assignments = await context.CallActivityAsync<List<Assignment>>(nameof(GetAssignmentList), null);
 
             Console.WriteLine(assignments.Count());
             var classJobs = new List<ClassGradingJob>();
@@ -78,8 +78,8 @@ namespace AzureAutomaticGradingEngineFunctionApp
                 var i = 0;
                 foreach (dynamic student in classGradingJob.students)
                 {
-                    gradingTasks[i] = context.CallActivityAsync(
-                        "RunAndSaveTestResult",
+                    gradingTasks[i] = context.CallActivityAsync<SingleGradingJob>(
+                        nameof(RunAndSaveTestResult),
                         new SingleGradingJob
                         {
                             assignment = classGradingJob.assignment,
@@ -95,7 +95,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
             for (var i = 0; i < assignments.Count(); i++)
             {
                 task2s[i] = context.CallActivityAsync(
-                    "SaveMarkJson",
+                    nameof(SaveMarkJson),
                     assignments[i]);
             }
             await Task.WhenAll(task2s);
@@ -105,7 +105,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
         }
 
 
-        [FunctionName("GetAssignmentList")]
+        [FunctionName(nameof(GetAssignmentList))]
 #pragma warning disable IDE0060 // Remove unused parameter
         public static async Task<List<Assignment>> GetAssignmentList([ActivityTrigger] string name, ExecutionContext executionContext, ILogger log
 #pragma warning restore IDE0060 // Remove unused parameter
@@ -115,8 +115,10 @@ namespace AzureAutomaticGradingEngineFunctionApp
 
             var cloudTableClient = storageAccount.CreateCloudTableClient();
             var assignmentsTable = cloudTableClient.GetTableReference("assignments");
+            await assignmentsTable.CreateIfNotExistsAsync();
             var credentialsTable = cloudTableClient.GetTableReference("credentials");
-            
+            await credentialsTable.CreateIfNotExistsAsync();
+
             TableContinuationToken token = null;
             var assignments = new List<AssignmentTableEntity>();
             do
@@ -193,7 +195,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
             return new ClassGradingJob() { assignment = assignment, graderUrl = graderUrl, students = students };
         }
 
-        [FunctionName("RunAndSaveTestResult")]
+        [FunctionName(nameof(RunAndSaveTestResult))]
         public static async Task RunAndSaveTestResult([ActivityTrigger] SingleGradingJob job, ExecutionContext context, ILogger log)
         {
             var container = GetCloudBlobContainer(context, "testresult");
@@ -282,8 +284,8 @@ Azure Automatic Grading Engine
             var emailClient = new Email(config, log);
             emailClient.Send(emailMessage, new[] { Email.StringToAttachment(xml, "TestResult.txt", "text/plain") });
         }
-
-        [FunctionName("SaveMarkJson")]
+        
+        [FunctionName(nameof(SaveMarkJson))]
         public static async Task SaveMarkJson([ActivityTrigger] Assignment assignment,
             ExecutionContext executionContext,
             ILogger log)
