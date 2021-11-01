@@ -56,8 +56,9 @@ You need to add a Entity in assignments table.
 Partition Key: assignment or project name such as it114115
 Properties:
 1. "GraderUrl":  The grader HTTP Url 
-2. "TeacherEmail":  Teacher Email for class grade report. (Optional)
-3. "SendMarkEmailToStudents": This is a type boolean, set it to true if you want to send the mark report to students via an email. If this email property does not exist or the item is set to false, the email will not be sent.
+2. "CronExpression" : The grading schedule. The time must be must be divided by 5 minutes. [Follow Cronos Cron expression sample](https://github.com/HangfireIO/Cronos) use the expression */5 * * * *	Every 5 minutes
+3. "TeacherEmail":  Teacher Email for class grade report. (Optional)
+4. "SendMarkEmailToStudents": This is a type boolean, set it to true if you want to send the mark report to students via an email. If this email property does not exist or the item is set to false, the email will not be sent.
 
 ![Assignment](./images/AssignmentTableRecord.png)
 
@@ -92,28 +93,6 @@ Note:
 
 1. Subscription ID and Email must be unique for each assignment.
 2. Don't run <code>az ad sp create-for-rbac -n "gradingengine" --sdk-auth</code> repeatedly! Students need to submit the online form again with the new credentials.
-
-## Quick test with AzureGraderConsoleRunner
-
-Open \AzureGraderTestProject\AzureGraderConsoleRunner\Program.cs and change Environment.SetEnvironmentVariable("AzureAuthFilePath", @"C:\Users\developer\Documents\azureauth.json");
-
-Build and run AzureGraderConsoleRunner
-
-Test result will be saved in \AzureGraderTestProject\AzureGraderConsoleRunner\bin\Debug\test_result.xml
-
-## Run with Visual Studio Test Explorer
-
-Set up 2 system wide environment variables
-
-set AzureAuthFilePath=C:\Users\developer\Documents\azureauth.json
-
-Or update \repos\AzureGraderTestProject\AzureGraderTestProject\Config.cs
-
-## Scheduler Grader
-
-The scheduler is set to run every 12 hours by default and you can change the [TimerTrigger expression](https://github.com/microsoft/AzureAutomaticGradingEngine/blob/main/AzureAutomaticGradingEngineFunctionApp/ScheduleGraderFunction.cs)
-
-testResults: saves Nunit xml test result.
 
 ## Generate the Prebuilt package
 

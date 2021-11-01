@@ -17,6 +17,7 @@ using System.Threading.Tasks;
 using System.Web;
 using AzureAutomaticGradingEngineFunctionApp.Helper;
 using AzureAutomaticGradingEngineFunctionApp.Model;
+using Cronos;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs.Extensions.Http;
@@ -27,8 +28,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
     {
         [FunctionName(nameof(ScheduleGrader))]
         public static async Task ScheduleGrader(
-            [TimerTrigger("0 0 */12 * * *")] TimerInfo myTimer,
-            //[TimerTrigger("0 0 * * * *")] TimerInfo myTimer,
+            [TimerTrigger("0 */5 * * * *")] TimerInfo myTimer,
             [DurableClient] IDurableOrchestrationClient starter,
             ILogger log)
         {
@@ -74,8 +74,6 @@ namespace AzureAutomaticGradingEngineFunctionApp
 
             foreach (var classGradingJob in classJobs)
             {
-
-                // Parallel mode code is working due to Azure Function cannot run NUnit in parallel.
                 var gradingTasks = new Task[classGradingJob.students.Count];
                 var i = 0;
                 foreach (dynamic student in classGradingJob.students)
@@ -109,7 +107,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
 
         [FunctionName(nameof(GetAssignmentList))]
 #pragma warning disable IDE0060 // Remove unused parameter
-        public static async Task<List<Assignment>> GetAssignmentList([ActivityTrigger] string name, ExecutionContext executionContext
+        public static async Task<List<Assignment>> GetAssignmentList([ActivityTrigger] string name, ExecutionContext executionContext, ILogger log
 #pragma warning restore IDE0060 // Remove unused parameter
     )
         {
@@ -129,6 +127,27 @@ namespace AzureAutomaticGradingEngineFunctionApp
                 assignments.AddRange(queryResult.Results);
                 token = queryResult.ContinuationToken;
             } while (token != null);
+
+            var now = DateTime.UtcNow;
+            bool IsTriggered(AssignmentTableEntity assignment)
+            {
+                try
+                {
+                    var expression = CronExpression.Parse(assignment.CronExpression);
+                    var occurrences = expression.GetOccurrences(now.AddSeconds(-30), now.AddSeconds(30),
+                        fromInclusive: true, toInclusive: true);
+                    var trigger = occurrences.Any();
+                    log.LogInformation($"{assignment.PartitionKey} {assignment.CronExpression} trigger - {trigger}");
+                    return trigger;
+                }
+                catch (Exception ex)
+                {
+                    log.LogInformation($"{assignment.PartitionKey} Invalid Cron Expression {assignment.CronExpression}!");
+                    return false;
+                }
+            }
+
+            assignments = assignments.Where(IsTriggered).ToList();
 
             var results = new List<Assignment>();
             foreach (var assignment in assignments)
@@ -159,6 +178,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
                     Name = project,
                     TeacherEmail = assignment.TeacherEmail,
                     SendMarkEmailToStudents = sendMarkEmailToStudents,
+                    GradeTime = now,
                     Context = new ClassContext() { GraderUrl = graderUrl, Students = JsonConvert.SerializeObject(students) }
                 });
 
@@ -240,7 +260,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
             var nUnitTestResult = GradeReportFunction.ParseNUnitTestResult(xml);
             var totalMark = nUnitTestResult.Sum(c => c.Value);
 
-            var marks = String.Join("",
+            var marks = string.Join("",
                 nUnitTestResult.OrderBy(c => c.Key).Select(c => c.Key + ": " + c.Value + "\n").ToArray());
 
             var body = $@"
@@ -262,7 +282,7 @@ Azure Automatic Grading Engine
 
             var config = new Config(context);
             var emailClient = new Email(config, log);
-            emailClient.Send(emailMessage, new[] { Email.StringToAttachment(xml, "TestResult.xml", "text/xml") });
+            emailClient.Send(emailMessage, new[] { Email.StringToAttachment(xml, "TestResult.txt", "text/plain") });
         }
         
         [FunctionName(nameof(SaveMarkJson))]
@@ -295,7 +315,7 @@ Azure Automatic Grading Engine
                 var emailMessage = new EmailMessage
                 {
                     To = assignment.TeacherEmail,
-                    Subject = $"Accumulated Mark for {assignment.Name} at {now}",
+                    Subject = $"Accumulated Mark for {assignment.Name} on {assignment.GradeTime} (UTC)",
                     Body = @"Dear Teacher, 
 
 Here are the accumulated mark report.

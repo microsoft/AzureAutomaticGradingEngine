@@ -9,6 +9,7 @@ namespace AzureAutomaticGradingEngineFunctionApp.Model
         public string Name { get; set; }
         public string TeacherEmail { get; set; }
         public bool SendMarkEmailToStudents { get; set; }
+        public DateTime GradeTime { get; set; }
         public ClassContext Context { get; set; }
         
     }

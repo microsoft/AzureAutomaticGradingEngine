@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Net.Mail;
 using AzureAutomaticGradingEngineFunctionApp.Model;
 using Microsoft.Extensions.Logging;
@@ -45,7 +46,10 @@ namespace AzureAutomaticGradingEngineFunctionApp.Helper
                 return;
             }
 
-            var body = email.Body + "\n\n environment:" + _environment;
+            var body = email.Body;
+            if (!string.IsNullOrEmpty(_environment))
+                body += "\n\n (environment:" + _environment + ")";
+
             var message = new MailMessage(_fromAddress, email.To, email.Subject, body);
 
             if (attachments != null)
