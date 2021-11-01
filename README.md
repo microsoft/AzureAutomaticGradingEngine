@@ -56,7 +56,7 @@ You need to add a Entity in assignments table.
 Partition Key: assignment or project name such as it114115
 Properties:
 1. "GraderUrl":  The grader HTTP Url 
-2. "CronExpression" : The grading schedule and it must be divided by 5 minutes. [Follow Cronos Cron expresssion sample](https://github.com/HangfireIO/Cronos)
+2. "CronExpression" : The grading schedule. The time must be must be divided by 5 minutes. [Follow Cronos Cron expression sample](https://github.com/HangfireIO/Cronos) use the expression */5 * * * *	Every 5 minutes
 3. "TeacherEmail":  Teacher Email for class grade report. (Optional)
 4. "SendMarkEmailToStudents": This is a type boolean, set it to true if you want to send the mark report to students via an email. If this email property does not exist or the item is set to false, the email will not be sent.
 
