@@ -260,7 +260,7 @@ Azure Automatic Grading Engine
 
             var config = new Config(context);
             var emailClient = new Email(config, log);
-            emailClient.Send(emailMessage, new[] { Email.StringToAttachment(xml, "TestResult.xml", "text/xml") });
+            emailClient.Send(emailMessage, new[] { Email.StringToAttachment(xml, "TestResult.txt", "text/plain") });
         }
         
         [FunctionName("SaveMarkJson")]
