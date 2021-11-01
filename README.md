@@ -94,28 +94,6 @@ Note:
 1. Subscription ID and Email must be unique for each assignment.
 2. Don't run <code>az ad sp create-for-rbac -n "gradingengine" --sdk-auth</code> repeatedly! Students need to submit the online form again with the new credentials.
 
-## Quick test with AzureGraderConsoleRunner
-
-Open \AzureGraderTestProject\AzureGraderConsoleRunner\Program.cs and change Environment.SetEnvironmentVariable("AzureAuthFilePath", @"C:\Users\developer\Documents\azureauth.json");
-
-Build and run AzureGraderConsoleRunner
-
-Test result will be saved in \AzureGraderTestProject\AzureGraderConsoleRunner\bin\Debug\test_result.xml
-
-## Run with Visual Studio Test Explorer
-
-Set up 2 system wide environment variables
-
-set AzureAuthFilePath=C:\Users\developer\Documents\azureauth.json
-
-Or update \repos\AzureGraderTestProject\AzureGraderTestProject\Config.cs
-
-## Scheduler Grader
-
-The scheduler is set to run every 12 hours by default and you can change the [TimerTrigger expression](https://github.com/microsoft/AzureAutomaticGradingEngine/blob/main/AzureAutomaticGradingEngineFunctionApp/ScheduleGraderFunction.cs)
-
-testResults: saves Nunit xml test result.
-
 ## Generate the Prebuilt package
 
 Get the latest zip package

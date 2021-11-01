@@ -260,7 +260,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
             var nUnitTestResult = GradeReportFunction.ParseNUnitTestResult(xml);
             var totalMark = nUnitTestResult.Sum(c => c.Value);
 
-            var marks = String.Join("",
+            var marks = string.Join("",
                 nUnitTestResult.OrderBy(c => c.Key).Select(c => c.Key + ": " + c.Value + "\n").ToArray());
 
             var body = $@"

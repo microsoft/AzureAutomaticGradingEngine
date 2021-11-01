@@ -18,16 +18,12 @@
 		<Resource Include=".gitignore" />
 	</ItemGroup>
 	<ItemGroup>
-		<None Update="AzureGraderTestProject.exe">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-			<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-		</None>
 		<None Update="host.json">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 		<None Update="local.settings.json">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      <CopyToPublishDirectory>Never</CopyToPublishDirectory>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+			<CopyToPublishDirectory>Never</CopyToPublishDirectory>
 		</None>
 		<None Update="local.settings.json.template">
 			<CopyToPublishDirectory>Never</CopyToPublishDirectory>
