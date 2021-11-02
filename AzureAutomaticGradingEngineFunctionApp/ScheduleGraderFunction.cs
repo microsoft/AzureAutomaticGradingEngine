@@ -36,7 +36,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
             {
                 log.LogInformation("Timer is running late!");
             }
-            string instanceId = await starter.StartNewAsync("GraderOrchestrationFunction", null);
+            string instanceId = await starter.StartNewAsync(nameof(GraderOrchestrationFunction), null, false);
             log.LogInformation($"Started orchestration with ID = '{instanceId}'.");
         }
 
@@ -48,38 +48,37 @@ namespace AzureAutomaticGradingEngineFunctionApp
             [DurableClient] IDurableOrchestrationClient starter
         )
         {
-            var instanceId = await starter.StartNewAsync("GraderOrchestrationFunction", null);
+
+            var instanceId = await starter.StartNewAsync(nameof(GraderOrchestrationFunction), null, true);
             log.LogInformation($"Started orchestration with ID = '{instanceId}'.");
 
-            return new ContentResult
-            {
-                Content = $"Started orchestration with ID = '{instanceId}'.",
-                ContentType = "text/html",
-                StatusCode = 200,
-            };
+            return starter.CreateCheckStatusResponse(req, instanceId);
         }
 
         [FunctionName(nameof(GraderOrchestrationFunction))]
         public static async Task GraderOrchestrationFunction(
-            [OrchestrationTrigger] IDurableOrchestrationContext context)
+            [OrchestrationTrigger] IDurableOrchestrationContext context, ILogger log)
         {
-            var assignments = await context.CallActivityAsync<List<Assignment>>(nameof(GetAssignmentList), null);
+            bool isManual = context.GetInput<bool>();
+            var assignments = await context.CallActivityAsync<List<Assignment>>(nameof(GetAssignmentList), isManual);
 
-            Console.WriteLine(assignments.Count());
+            log.LogInformation($"context {context.InstanceId} {context.IsReplaying} Assignment Count = '{assignments.Count()}' isManual:{isManual} ");
             var classJobs = new List<ClassGradingJob>();
             for (var i = 0; i < assignments.Count(); i++)
             {
                 classJobs.Add(ToClassGradingJob(assignments[i]));
             }
-
+            var retryOptions = new RetryOptions(
+                firstRetryInterval: TimeSpan.FromSeconds(5),
+                maxNumberOfAttempts: 1);
             foreach (var classGradingJob in classJobs)
             {
                 var gradingTasks = new Task[classGradingJob.students.Count];
                 var i = 0;
                 foreach (dynamic student in classGradingJob.students)
                 {
-                    gradingTasks[i] = context.CallActivityAsync<SingleGradingJob>(
-                        nameof(RunAndSaveTestResult),
+                    gradingTasks[i] = context.CallActivityWithRetryAsync<Task>(
+                        nameof(RunAndSaveTestResult), retryOptions,
                         new SingleGradingJob
                         {
                             assignment = classGradingJob.assignment,
@@ -91,15 +90,19 @@ namespace AzureAutomaticGradingEngineFunctionApp
                 await Task.WhenAll(gradingTasks);
             }
 
-            var task2s = new Task[assignments.Count()];
-            for (var i = 0; i < assignments.Count(); i++)
+            
+            async Task AssignmentTasks(string activity)
             {
-                task2s[i] = context.CallActivityAsync(
-                    nameof(SaveMarkJson),
-                    assignments[i]);
+                var task = new Task[assignments.Count()];
+                for (var i = 0; i < assignments.Count(); i++)
+                {
+                    task[i] = context.CallActivityWithRetryAsync(activity, retryOptions, assignments[i]);
+                }
+                await Task.WhenAll(task);
             }
-            await Task.WhenAll(task2s);
 
+            await AssignmentTasks(nameof(SaveAccumulatedMarkJson));
+            await AssignmentTasks(nameof(SaveTodayMarkJson));
 
             Console.WriteLine("Completed!");
         }
@@ -107,7 +110,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
 
         [FunctionName(nameof(GetAssignmentList))]
 #pragma warning disable IDE0060 // Remove unused parameter
-        public static async Task<List<Assignment>> GetAssignmentList([ActivityTrigger] string name, ExecutionContext executionContext, ILogger log
+        public static async Task<List<Assignment>> GetAssignmentList([ActivityTrigger] bool isManual, ExecutionContext executionContext, ILogger log
 #pragma warning restore IDE0060 // Remove unused parameter
     )
         {
@@ -140,14 +143,15 @@ namespace AzureAutomaticGradingEngineFunctionApp
                     log.LogInformation($"{assignment.PartitionKey} {assignment.CronExpression} trigger - {trigger}");
                     return trigger;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     log.LogInformation($"{assignment.PartitionKey} Invalid Cron Expression {assignment.CronExpression}!");
                     return false;
                 }
             }
 
-            assignments = assignments.Where(IsTriggered).ToList();
+            if (!isManual)
+                assignments = assignments.Where(IsTriggered).ToList();
 
             var results = new List<Assignment>();
             foreach (var assignment in assignments)
@@ -284,9 +288,9 @@ Azure Automatic Grading Engine
             var emailClient = new Email(config, log);
             emailClient.Send(emailMessage, new[] { Email.StringToAttachment(xml, "TestResult.txt", "text/plain") });
         }
-        
-        [FunctionName(nameof(SaveMarkJson))]
-        public static async Task SaveMarkJson([ActivityTrigger] Assignment assignment,
+
+        [FunctionName(nameof(SaveAccumulatedMarkJson))]
+        public static async Task SaveAccumulatedMarkJson([ActivityTrigger] Assignment assignment,
             ExecutionContext executionContext,
             ILogger log)
         {
@@ -296,11 +300,6 @@ Azure Automatic Grading Engine
             await SaveJsonReport(executionContext, blobName, accumulatedMarks);
             blobName = assignment.Name + "/accumulatedMarks.json";
             await SaveJsonReport(executionContext, blobName, accumulatedMarks);
-            var todayMarks = await GradeReportFunction.CalculateMarks(log, executionContext, assignment.Name, true);
-            blobName = string.Format(CultureInfo.InvariantCulture, assignment.Name + "/{0:yyyy/MM/dd/HH/mm}/todayMarks.json", now);
-            await SaveJsonReport(executionContext, blobName, todayMarks);
-            blobName = assignment.Name + "/todayMarks.json";
-            await SaveJsonReport(executionContext, blobName, todayMarks);
 
             var workbookMemoryStream = new MemoryStream();
             GradeReportFunction.WriteWorkbookToMemoryStream(accumulatedMarks, workbookMemoryStream);
@@ -336,7 +335,21 @@ Azure Automatic Grading Engine
             }
         }
 
-        private static async Task SaveJsonReport(ExecutionContext executionContext, string blobName, Dictionary<string, Dictionary<string, int>> calculateMarks)
+        [FunctionName(nameof(SaveTodayMarkJson))]
+        public static async Task SaveTodayMarkJson([ActivityTrigger] Assignment assignment,
+            ExecutionContext executionContext,
+            ILogger log)
+        {
+            var now = DateTime.Now;
+            var todayMarks = await GradeReportFunction.CalculateMarks(log, executionContext, assignment.Name, true);
+            var blobName = string.Format(CultureInfo.InvariantCulture, assignment.Name + "/{0:yyyy/MM/dd/HH/mm}/todayMarks.json", now);
+            await SaveJsonReport(executionContext, blobName, todayMarks);
+            blobName = assignment.Name + "/todayMarks.json";
+            await SaveJsonReport(executionContext, blobName, todayMarks);
+
+        }
+
+        private static async Task SaveJsonReport(ExecutionContext executionContext, string blobName, Dictionary<string, (Dictionary<string, int>, Dictionary<string, DateTime>)> calculateMarks)
         {
             var blob = GetCloudBlockBlobInReportContainer(executionContext, blobName);
             blob.Properties.ContentType = "application/json";
