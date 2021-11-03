@@ -218,10 +218,9 @@ namespace AzureAutomaticGradingEngineFunctionApp
                 var watch = System.Diagnostics.Stopwatch.StartNew();
                 var xml = await client.GetStringAsync(uri);
 
-                var now = DateTime.Now;
-                await SaveTestResult(container, job.assignment.Name, job.student.email.ToString(), xml, now);
+                await SaveTestResult(container, job.assignment.Name, job.student.email.ToString(), xml, job.assignment.GradeTime);
                 if (job.assignment.SendMarkEmailToStudents)
-                    EmailTestResultToStudent(context, log, job.assignment.Name, job.student.email.ToString(), xml, now);
+                    EmailTestResultToStudent(context, log, job.assignment.Name, job.student.email.ToString(), xml, job.assignment.GradeTime);
                 watch.Stop();
                 var elapsedMs = watch.ElapsedMilliseconds;
                 Console.WriteLine(job.student.email + " get test result in " + elapsedMs + "ms.");
@@ -243,10 +242,10 @@ namespace AzureAutomaticGradingEngineFunctionApp
             return "?" + string.Join("&", array);
         }
 
-        private static async Task SaveTestResult(CloudBlobContainer container, string assignment, string email, string xml, DateTime now)
+        private static async Task SaveTestResult(CloudBlobContainer container, string assignment, string email, string xml, DateTime gradeTime)
         {
             var filename = Regex.Replace(email, @"[^0-9a-zA-Z]+", "");
-            var blobName = string.Format(CultureInfo.InvariantCulture, assignment + "/" + email + "/{0:yyyy/MM/dd/HH/mm}/" + filename + ".xml", now);
+            var blobName = string.Format(CultureInfo.InvariantCulture, assignment + "/" + email + "/{0:yyyy/MM/dd/HH/mm}/" + filename + ".xml", gradeTime);
             Console.WriteLine(blobName);
 
             var blob = container.GetBlockBlobReference(blobName);
@@ -259,7 +258,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
             await blob.UploadFromStreamAsync(ms);
         }
 
-        private static void EmailTestResultToStudent(ExecutionContext context, ILogger log, string assignment, string email, string xml, DateTime now)
+        private static void EmailTestResultToStudent(ExecutionContext context, ILogger log, string assignment, string email, string xml, DateTime gradeTime)
         {
             var nUnitTestResult = GradeReportFunction.ParseNUnitTestResult(xml);
             var totalMark = nUnitTestResult.Sum(c => c.Value);
@@ -280,7 +279,7 @@ Azure Automatic Grading Engine
             var emailMessage = new EmailMessage
             {
                 To = email,
-                Subject = $"Your {assignment} Mark at {now}",
+                Subject = $"Your {assignment} Mark at {gradeTime}",
                 Body = body
             };
 
@@ -294,9 +293,8 @@ Azure Automatic Grading Engine
             ExecutionContext executionContext,
             ILogger log)
         {
-            var now = DateTime.Now;
             var accumulatedMarks = await GradeReportFunction.CalculateMarks(log, executionContext, assignment.Name, false);
-            var blobName = string.Format(CultureInfo.InvariantCulture, assignment.Name + "/{0:yyyy/MM/dd/HH/mm}/accumulatedMarks.json", now);
+            var blobName = string.Format(CultureInfo.InvariantCulture, assignment.Name + "/{0:yyyy/MM/dd/HH/mm}/accumulatedMarks.json", assignment.GradeTime);
             await SaveJsonReport(executionContext, blobName, accumulatedMarks);
             blobName = assignment.Name + "/accumulatedMarks.json";
             await SaveJsonReport(executionContext, blobName, accumulatedMarks);
@@ -304,7 +302,7 @@ Azure Automatic Grading Engine
             var workbookMemoryStream = new MemoryStream();
             GradeReportFunction.WriteWorkbookToMemoryStream(accumulatedMarks, workbookMemoryStream);
 
-            blobName = string.Format(CultureInfo.InvariantCulture, assignment.Name + "/{0:yyyy/MM/dd/HH/mm}/marks.xlsx", now);
+            blobName = string.Format(CultureInfo.InvariantCulture, assignment.Name + "/{0:yyyy/MM/dd/HH/mm}/marks.xlsx", assignment.GradeTime);
             await SaveExcelReport(executionContext, blobName, workbookMemoryStream);
             blobName = assignment.Name + "/marks.xlsx";
             await SaveExcelReport(executionContext, blobName, workbookMemoryStream);
@@ -340,13 +338,11 @@ Azure Automatic Grading Engine
             ExecutionContext executionContext,
             ILogger log)
         {
-            var now = DateTime.Now;
             var todayMarks = await GradeReportFunction.CalculateMarks(log, executionContext, assignment.Name, true);
-            var blobName = string.Format(CultureInfo.InvariantCulture, assignment.Name + "/{0:yyyy/MM/dd/HH/mm}/todayMarks.json", now);
+            var blobName = string.Format(CultureInfo.InvariantCulture, assignment.Name + "/{0:yyyy/MM/dd/HH/mm}/todayMarks.json", assignment.GradeTime);
             await SaveJsonReport(executionContext, blobName, todayMarks);
             blobName = assignment.Name + "/todayMarks.json";
             await SaveJsonReport(executionContext, blobName, todayMarks);
-
         }
 
         private static async Task SaveJsonReport(ExecutionContext executionContext, string blobName, Dictionary<string, MarkDetails> calculateMarks)
