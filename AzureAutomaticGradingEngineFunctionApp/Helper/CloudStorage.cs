@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Azure;
 using Microsoft.Azure.WebJobs;
@@ -20,10 +21,13 @@ namespace AzureAutomaticGradingEngineFunctionApp.Helper
             CloudStorageAccount storageAccount = CloudStorageAccount.Parse(config["storageTestResult"]);
             return storageAccount;
         }
-        public static async Task<List<IListBlobItem>> ListBlobsFlatListing(CloudBlobContainer cloudBlobContainer, string prefix, ILogger log)
+        public static async Task<List<IListBlobItem>> ListBlobsFlatListing(CloudBlobContainer cloudBlobContainer, string prefix, ILogger log, bool isToday)
         {
             var blobItems = new List<IListBlobItem>();
             BlobContinuationToken blobContinuationToken = null;
+
+            var now = DateTime.Now;
+            var nowPath = $@"/{now.Year}/{now.Month}/{now.Day}/";
             try
             {
                 do
@@ -42,7 +46,14 @@ namespace AzureAutomaticGradingEngineFunctionApp.Helper
                     blobContinuationToken = resultSegment.ContinuationToken;
                     foreach (IListBlobItem item in resultSegment.Results)
                     {
-                        blobItems.Add(item);
+                        if (isToday && item.Uri.ToString().Contains(nowPath))
+                        {
+                            blobItems.Add(item);
+                        }
+                        else
+                        {
+                            blobItems.Add(item);
+                        }
                     }
                 } while (blobContinuationToken != null);
             }

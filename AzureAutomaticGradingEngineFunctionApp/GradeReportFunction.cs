@@ -62,7 +62,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
             var blobClient = storageAccount.CreateCloudBlobClient();
             var container = blobClient.GetContainerReference("testresult");
 
-            var blobItems = await CloudStorage.ListBlobsFlatListing(container, assignment, log);
+            var blobItems = await CloudStorage.ListBlobsFlatListing(container, assignment, log, isToday);
 
             var testResults = blobItems.Select(c => new
             {
