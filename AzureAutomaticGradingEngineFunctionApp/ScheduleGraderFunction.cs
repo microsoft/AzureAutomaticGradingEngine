@@ -90,7 +90,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
                 await Task.WhenAll(gradingTasks);
             }
 
-            
+
             async Task AssignmentTasks(string activity)
             {
                 var task = new Task[assignments.Count()];
@@ -137,10 +137,10 @@ namespace AzureAutomaticGradingEngineFunctionApp
                 try
                 {
                     var expression = CronExpression.Parse(assignment.CronExpression);
-                    var occurrences = expression.GetOccurrences(now.AddSeconds(-30), now.AddSeconds(30),
-                        fromInclusive: true, toInclusive: true);
-                    var trigger = occurrences.Any();
-                    log.LogInformation($"{assignment.PartitionKey} {assignment.CronExpression} trigger - {trigger}");
+                    var nextOccurrence = expression.GetNextOccurrence(now.AddSeconds(-10));
+                    var diff = nextOccurrence.HasValue ? Math.Abs(nextOccurrence.Value.Subtract(now).TotalSeconds) : -1;
+                    var trigger = nextOccurrence.HasValue && diff < 10;
+                    log.LogInformation($"{assignment.PartitionKey} {assignment.CronExpression} trigger: {trigger} , diff: {diff} seconds");
                     return trigger;
                 }
                 catch (Exception)
