@@ -304,7 +304,7 @@ Azure Automatic Grading Engine
             var workbookMemoryStream = new MemoryStream();
             GradeReportFunction.WriteWorkbookToMemoryStream(accumulatedMarks, workbookMemoryStream);
 
-            blobName = string.Format(CultureInfo.InvariantCulture, assignment.Name + "/{0:yyyy/MM/dd/HH/mm}/marks.json", now);
+            blobName = string.Format(CultureInfo.InvariantCulture, assignment.Name + "/{0:yyyy/MM/dd/HH/mm}/marks.xlsx", now);
             await SaveExcelReport(executionContext, blobName, workbookMemoryStream);
             blobName = assignment.Name + "/marks.xlsx";
             await SaveExcelReport(executionContext, blobName, workbookMemoryStream);
@@ -349,7 +349,7 @@ Azure Automatic Grading Engine
 
         }
 
-        private static async Task SaveJsonReport(ExecutionContext executionContext, string blobName, Dictionary<string, (Dictionary<string, int>, Dictionary<string, DateTime>)> calculateMarks)
+        private static async Task SaveJsonReport(ExecutionContext executionContext, string blobName, Dictionary<string, MarkDetails> calculateMarks)
         {
             var blob = GetCloudBlockBlobInReportContainer(executionContext, blobName);
             blob.Properties.ContentType = "application/json";

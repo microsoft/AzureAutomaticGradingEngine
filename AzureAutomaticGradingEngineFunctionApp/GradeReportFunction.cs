@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
 using AzureAutomaticGradingEngineFunctionApp.Helper;
+using AzureAutomaticGradingEngineFunctionApp.Model;
 using ClosedXML.Excel;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -48,7 +49,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
             }
         }
 
-        public static MemoryStream WriteWorkbookToMemoryStream(Dictionary<string, (Dictionary<string, int>, Dictionary<string, DateTime>)> accumulateMarks, MemoryStream stream)
+        public static MemoryStream WriteWorkbookToMemoryStream(Dictionary<string, MarkDetails> accumulateMarks, MemoryStream stream)
         {
             using var workbook = new XLWorkbook();
             GenerateMarksheets(accumulateMarks, workbook);
@@ -56,7 +57,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
             return stream;
         }
 
-        public static async Task<Dictionary<string, (Dictionary<string, int>, Dictionary<string, DateTime>)>> CalculateMarks(ILogger log, ExecutionContext context, string assignment, bool isToday)
+        public static async Task<Dictionary<string, MarkDetails>> CalculateMarks(ILogger log, ExecutionContext context, string assignment, bool isToday)
         {
             var storageAccount = CloudStorage.GetCloudStorageAccount(context);
             var blobClient = storageAccount.CreateCloudBlobClient();
@@ -84,7 +85,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
             bool IsNotToday(DateTime date) => (new DateTime(date.Year, date.Month, date.Day)).Subtract(new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day)).Days != 0;
 
 
-            var accumulateMarks = testResults.Aggregate(new Dictionary<string, (Dictionary<string, int>, Dictionary<string, DateTime>)>(), (acc, item) =>
+            var accumulateMarks = testResults.Aggregate(new Dictionary<string, MarkDetails>(), (acc, item) =>
             {
                 if (isToday && IsNotToday(item.CreateTime))
                 {
@@ -95,26 +96,26 @@ namespace AzureAutomaticGradingEngineFunctionApp
                     var previous = acc[item.Email];
                     var currentMark = item.TestResult;
                     //Key is testname and Value is list of (testname,mark)
-                    var markResult = previous.Item1.Concat(currentMark).GroupBy(d => d.Key)
+                    var markResult = previous.Mark.Concat(currentMark).GroupBy(d => d.Key)
                         .ToDictionary(d => d.Key, d => d.Sum(c => c.Value));
 
                     var currentTime = item.TestCompeteTime;
-                    var timeResult = previous.Item2.Concat(currentTime).GroupBy(d => d.Key)
+                    var timeResult = previous.CompleteTime.Concat(currentTime).GroupBy(d => d.Key)
                         .ToDictionary(d => d.Key, d => d.Min(c => c.Value));
 
-                    acc[item.Email] = (markResult, timeResult);
+                    acc[item.Email] = new MarkDetails(){Mark = markResult, CompleteTime = timeResult};
                     return acc;
                 }
                 else
                 {
-                    acc.Add(item.Email, (item.TestResult, item.TestCompeteTime));
+                    acc.Add(item.Email, new MarkDetails() { Mark = item.TestResult, CompleteTime=item.TestCompeteTime});
                     return acc;
                 }
             });
             return accumulateMarks;
         }
 
-        private static void GenerateMarksheets(Dictionary<string, (Dictionary<string, int>, Dictionary<string, DateTime>)> accumulateMarks, XLWorkbook workbook)
+        private static void GenerateMarksheets(Dictionary<string, MarkDetails> accumulateMarks, XLWorkbook workbook)
         {
             var worksheet =
             workbook.Worksheets.Add("Marks");
@@ -126,8 +127,8 @@ namespace AzureAutomaticGradingEngineFunctionApp
             {
                 var student = accumulateMarks.ElementAt(i);
                 worksheet.Cell(i + 2, 1).Value = student.Key;
-                tests.UnionWith(student.Value.Item1.Keys.ToHashSet());
-                worksheet.Cell(i + 2, 2).Value = student.Value.Item1.Values.Sum();
+                tests.UnionWith(student.Value.Mark.Keys.ToHashSet());
+                worksheet.Cell(i + 2, 2).Value = student.Value.Mark.Values.Sum();
             }
             var testList = tests.ToList();
             testList.Sort();
@@ -138,7 +139,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
                 for (var i = 0; i < accumulateMarks.Count(); i++)
                 {
                     var student = accumulateMarks.ElementAt(i);
-                    worksheet.Cell(i + 2, j + 3).Value = student.Value.Item1.GetValueOrDefault(testName, 0);
+                    worksheet.Cell(i + 2, j + 3).Value = student.Value.Mark.GetValueOrDefault(testName, 0);
                 }
             }
 
@@ -152,8 +153,8 @@ namespace AzureAutomaticGradingEngineFunctionApp
             {
                 var student = accumulateMarks.ElementAt(i);
                 worksheet.Cell(i + 2, 1).Value = student.Key;
-                tests.UnionWith(student.Value.Item2.Keys.ToHashSet());
-                var beginDateTime = student.Value.Item2.Values.Min(c => c);
+                tests.UnionWith(student.Value.CompleteTime.Keys.ToHashSet());
+                var beginDateTime = student.Value.CompleteTime.Values.Min(c => c);
                 if (beginDateTime == DateTime.MaxValue)
                     worksheet.Cell(i + 2, 2).Value = "";
                 else
@@ -168,7 +169,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
                 for (var i = 0; i < accumulateMarks.Count(); i++)
                 {
                     var student = accumulateMarks.ElementAt(i);
-                    var completeTime = student.Value.Item2.GetValueOrDefault(testName, DateTime.MaxValue);
+                    var completeTime = student.Value.CompleteTime.GetValueOrDefault(testName, DateTime.MaxValue);
                     if (completeTime == DateTime.MaxValue)
                         worksheet.Cell(i + 2, j + 3).Value = "";
                     else
