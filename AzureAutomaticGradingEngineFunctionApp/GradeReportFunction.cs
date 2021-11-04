@@ -69,18 +69,19 @@ namespace AzureAutomaticGradingEngineFunctionApp
             {
                 Email = ExtractEmail(c.Uri.ToString()),
                 XmlDoc = LoadTestResultToXmlDocument(container, c),
-            }).Select(c => new
-            {
-                c.Email,
-                TestResult = ParseNUnitTestResult(c.XmlDoc),
-                CreateTime = GetTestTime(c.XmlDoc)
-            }).Select(c => new
-            {
-                c.Email,
-                c.TestResult,
-                TestCompeteTime = c.TestResult.Select(a => (a.Key, a.Value == 1 ? c.CreateTime : DateTime.MaxValue)).ToDictionary(d => d.Key, d => d.Item2),
-                c.CreateTime
-            }); ;
+            }).Where(c => c.XmlDoc != null)
+                .Select(c => new
+                {
+                    c.Email,
+                    TestResult = ParseNUnitTestResult(c.XmlDoc),
+                    CreateTime = GetTestTime(c.XmlDoc)
+                }).Select(c => new
+                {
+                    c.Email,
+                    c.TestResult,
+                    TestCompeteTime = c.TestResult.Select(a => (a.Key, a.Value == 1 ? c.CreateTime : DateTime.MaxValue)).ToDictionary(d => d.Key, d => d.Item2),
+                    c.CreateTime
+                }); ;
 
             bool IsNotToday(DateTime date) => (new DateTime(date.Year, date.Month, date.Day)).Subtract(new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day)).Days != 0;
 
@@ -103,12 +104,12 @@ namespace AzureAutomaticGradingEngineFunctionApp
                     var timeResult = previous.CompleteTime.Concat(currentTime).GroupBy(d => d.Key)
                         .ToDictionary(d => d.Key, d => d.Min(c => c.Value));
 
-                    acc[item.Email] = new MarkDetails(){Mark = markResult, CompleteTime = timeResult};
+                    acc[item.Email] = new MarkDetails() { Mark = markResult, CompleteTime = timeResult };
                     return acc;
                 }
                 else
                 {
-                    acc.Add(item.Email, new MarkDetails() { Mark = item.TestResult, CompleteTime=item.TestCompeteTime});
+                    acc.Add(item.Email, new MarkDetails() { Mark = item.TestResult, CompleteTime = item.TestCompeteTime });
                     return acc;
                 }
             });
@@ -236,9 +237,18 @@ namespace AzureAutomaticGradingEngineFunctionApp
             var blobName = item.Uri.ToString()[(cloudBlobContainer.Uri.ToString().Length + 1)..];
             var blob = cloudBlobContainer.GetBlockBlobReference(blobName);
             string rawXml = blob.DownloadTextAsync().Result;
-            var xmlDoc = new XmlDocument();
-            xmlDoc.LoadXml(rawXml);
-            return xmlDoc;
+            try
+            {
+                var xmlDoc = new XmlDocument();
+                xmlDoc.LoadXml(rawXml);
+                return xmlDoc;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                return null;
+            }
+
         }
     }
 }
