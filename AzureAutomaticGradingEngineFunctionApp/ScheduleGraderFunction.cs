@@ -317,17 +317,5 @@ Azure Automatic Grading Engine
                 email.Send(emailMessage, new[] { excelAttachment, jsonAttachment });
             }
         }
-
-        [FunctionName(nameof(SaveTodayMarkJson))]
-        public static async Task SaveTodayMarkJson([ActivityTrigger] Assignment assignment,
-            ExecutionContext executionContext,
-            ILogger log)
-        {
-            var todayMarks = await GradeReportFunction.CalculateMarks(log, executionContext, assignment.Name, true);
-            var blobName = string.Format(CultureInfo.InvariantCulture, assignment.Name + "/{0:yyyy/MM/dd/HH/mm}/todayMarks.json", assignment.GradeTime);
-            await CloudStorage.SaveJsonReport(executionContext, blobName, todayMarks);
-            blobName = assignment.Name + "/todayMarks.json";
-            await CloudStorage.SaveJsonReport(executionContext, blobName, todayMarks);
-        }
     }
 }
