@@ -1,7 +1,6 @@
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.DurableTask;
 using Microsoft.Extensions.Logging;
-using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Table;
 using Newtonsoft.Json;
 using System;
@@ -12,7 +11,6 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Mail;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web;
 using AzureAutomaticGradingEngineFunctionApp.Helper;
@@ -24,7 +22,7 @@ using Microsoft.Azure.WebJobs.Extensions.Http;
 
 namespace AzureAutomaticGradingEngineFunctionApp
 {
-    public static class ScheduleGraderFunction
+    public static partial class ScheduleGraderFunction
     {
         [FunctionName(nameof(ScheduleGrader))]
         public static async Task ScheduleGrader(
@@ -62,7 +60,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
             bool isManual = context.GetInput<bool>();
             var assignments = await context.CallActivityAsync<List<Assignment>>(nameof(GetAssignmentList), isManual);
 
-            log.LogInformation($"context {context.InstanceId} {context.IsReplaying} Assignment Count = '{assignments.Count()}' isManual:{isManual} ");
+            log.LogInformation($"context {context.InstanceId} {context.IsReplaying} Assignment Count = '{assignments.Count()}' ignoreCronExpression:{isManual} ");
             var classJobs = new List<ClassGradingJob>();
             for (var i = 0; i < assignments.Count(); i++)
             {
@@ -90,27 +88,30 @@ namespace AzureAutomaticGradingEngineFunctionApp
                 await Task.WhenAll(gradingTasks);
             }
 
-            
-            async Task AssignmentTasks(string activity)
-            {
-                var task = new Task[assignments.Count()];
-                for (var i = 0; i < assignments.Count(); i++)
-                {
-                    task[i] = context.CallActivityWithRetryAsync(activity, retryOptions, assignments[i]);
-                }
-                await Task.WhenAll(task);
-            }
-
-            await AssignmentTasks(nameof(SaveAccumulatedMarkJson));
-            await AssignmentTasks(nameof(SaveTodayMarkJson));
+            await AssignmentTasks(context, nameof(SaveAccumulatedMarkJson), assignments);
 
             Console.WriteLine("Completed!");
+        }
+
+        
+
+        public static async Task AssignmentTasks(IDurableOrchestrationContext context, string activity, List<Assignment> assignments)
+        {
+            var retryOptions = new RetryOptions(
+                firstRetryInterval: TimeSpan.FromSeconds(5),
+                maxNumberOfAttempts: 1);
+            var task = new Task[assignments.Count()];
+            for (var i = 0; i < assignments.Count(); i++)
+            {
+                task[i] = context.CallActivityWithRetryAsync(activity, retryOptions, assignments[i]);
+            }
+            await Task.WhenAll(task);
         }
 
 
         [FunctionName(nameof(GetAssignmentList))]
 #pragma warning disable IDE0060 // Remove unused parameter
-        public static async Task<List<Assignment>> GetAssignmentList([ActivityTrigger] bool isManual, ExecutionContext executionContext, ILogger log
+        public static async Task<List<Assignment>> GetAssignmentList([ActivityTrigger] bool ignoreCronExpression, ExecutionContext executionContext, ILogger log
 #pragma warning restore IDE0060 // Remove unused parameter
     )
         {
@@ -137,10 +138,10 @@ namespace AzureAutomaticGradingEngineFunctionApp
                 try
                 {
                     var expression = CronExpression.Parse(assignment.CronExpression);
-                    var occurrences = expression.GetOccurrences(now.AddSeconds(-30), now.AddSeconds(30),
-                        fromInclusive: true, toInclusive: true);
-                    var trigger = occurrences.Any();
-                    log.LogInformation($"{assignment.PartitionKey} {assignment.CronExpression} trigger - {trigger}");
+                    var nextOccurrence = expression.GetNextOccurrence(now.AddSeconds(-10));
+                    var diff = nextOccurrence.HasValue ? Math.Abs(nextOccurrence.Value.Subtract(now).TotalSeconds) : -1;
+                    var trigger = nextOccurrence.HasValue && diff < 10;
+                    log.LogInformation($"{assignment.PartitionKey} {assignment.CronExpression} trigger: {trigger} , diff: {diff} seconds");
                     return trigger;
                 }
                 catch (Exception)
@@ -150,7 +151,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
                 }
             }
 
-            if (!isManual)
+            if (!ignoreCronExpression)
                 assignments = assignments.Where(IsTriggered).ToList();
 
             var results = new List<Assignment>();
@@ -202,7 +203,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
         [FunctionName(nameof(RunAndSaveTestResult))]
         public static async Task RunAndSaveTestResult([ActivityTrigger] SingleGradingJob job, ExecutionContext context, ILogger log)
         {
-            var container = GetCloudBlobContainer(context, "testresult");
+            var container = CloudStorage.GetCloudBlobContainer(context, "testresult");
 
 #pragma warning disable IDE0017 // Simplify object initialization
             var client = new HttpClient();
@@ -218,10 +219,9 @@ namespace AzureAutomaticGradingEngineFunctionApp
                 var watch = System.Diagnostics.Stopwatch.StartNew();
                 var xml = await client.GetStringAsync(uri);
 
-                var now = DateTime.Now;
-                await SaveTestResult(container, job.assignment.Name, job.student.email.ToString(), xml, now);
+                await CloudStorage.SaveTestResult(container, job.assignment.Name, job.student.email.ToString(), xml, job.assignment.GradeTime);
                 if (job.assignment.SendMarkEmailToStudents)
-                    EmailTestResultToStudent(context, log, job.assignment.Name, job.student.email.ToString(), xml, now);
+                    EmailTestResultToStudent(context, log, job.assignment.Name, job.student.email.ToString(), xml, job.assignment.GradeTime);
                 watch.Stop();
                 var elapsedMs = watch.ElapsedMilliseconds;
                 Console.WriteLine(job.student.email + " get test result in " + elapsedMs + "ms.");
@@ -243,23 +243,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
             return "?" + string.Join("&", array);
         }
 
-        private static async Task SaveTestResult(CloudBlobContainer container, string assignment, string email, string xml, DateTime now)
-        {
-            var filename = Regex.Replace(email, @"[^0-9a-zA-Z]+", "");
-            var blobName = string.Format(CultureInfo.InvariantCulture, assignment + "/" + email + "/{0:yyyy/MM/dd/HH/mm}/" + filename + ".xml", now);
-            Console.WriteLine(blobName);
-
-            var blob = container.GetBlockBlobReference(blobName);
-            blob.Properties.ContentType = "application/content";
-            using var ms = new MemoryStream();
-            using var writer = new StreamWriter(ms);
-            await writer.WriteAsync(xml);
-            await writer.FlushAsync();
-            ms.Position = 0;
-            await blob.UploadFromStreamAsync(ms);
-        }
-
-        private static void EmailTestResultToStudent(ExecutionContext context, ILogger log, string assignment, string email, string xml, DateTime now)
+        private static void EmailTestResultToStudent(ExecutionContext context, ILogger log, string assignment, string email, string xml, DateTime gradeTime)
         {
             var nUnitTestResult = GradeReportFunction.ParseNUnitTestResult(xml);
             var totalMark = nUnitTestResult.Sum(c => c.Value);
@@ -280,7 +264,7 @@ Azure Automatic Grading Engine
             var emailMessage = new EmailMessage
             {
                 To = email,
-                Subject = $"Your {assignment} Mark at {now}",
+                Subject = $"Your {assignment} Mark at {gradeTime}",
                 Body = body
             };
 
@@ -294,20 +278,19 @@ Azure Automatic Grading Engine
             ExecutionContext executionContext,
             ILogger log)
         {
-            var now = DateTime.Now;
             var accumulatedMarks = await GradeReportFunction.CalculateMarks(log, executionContext, assignment.Name, false);
-            var blobName = string.Format(CultureInfo.InvariantCulture, assignment.Name + "/{0:yyyy/MM/dd/HH/mm}/accumulatedMarks.json", now);
-            await SaveJsonReport(executionContext, blobName, accumulatedMarks);
+            var blobName = string.Format(CultureInfo.InvariantCulture, assignment.Name + "/{0:yyyy/MM/dd/HH/mm}/accumulatedMarks.json", assignment.GradeTime);
+            await CloudStorage.SaveJsonReport(executionContext, blobName, accumulatedMarks);
             blobName = assignment.Name + "/accumulatedMarks.json";
-            await SaveJsonReport(executionContext, blobName, accumulatedMarks);
+            await CloudStorage.SaveJsonReport(executionContext, blobName, accumulatedMarks);
 
             var workbookMemoryStream = new MemoryStream();
             GradeReportFunction.WriteWorkbookToMemoryStream(accumulatedMarks, workbookMemoryStream);
 
-            blobName = string.Format(CultureInfo.InvariantCulture, assignment.Name + "/{0:yyyy/MM/dd/HH/mm}/marks.json", now);
-            await SaveExcelReport(executionContext, blobName, workbookMemoryStream);
+            blobName = string.Format(CultureInfo.InvariantCulture, assignment.Name + "/{0:yyyy/MM/dd/HH/mm}/marks.xlsx", assignment.GradeTime);
+            await CloudStorage.SaveExcelReport(executionContext, blobName, workbookMemoryStream);
             blobName = assignment.Name + "/marks.xlsx";
-            await SaveExcelReport(executionContext, blobName, workbookMemoryStream);
+            await CloudStorage.SaveExcelReport(executionContext, blobName, workbookMemoryStream);
 
             if (!string.IsNullOrEmpty(assignment.TeacherEmail))
             {
@@ -333,55 +316,6 @@ Azure Automatic Grading Engine
                     "accumulatedMarks.json", "application/json");
                 email.Send(emailMessage, new[] { excelAttachment, jsonAttachment });
             }
-        }
-
-        [FunctionName(nameof(SaveTodayMarkJson))]
-        public static async Task SaveTodayMarkJson([ActivityTrigger] Assignment assignment,
-            ExecutionContext executionContext,
-            ILogger log)
-        {
-            var now = DateTime.Now;
-            var todayMarks = await GradeReportFunction.CalculateMarks(log, executionContext, assignment.Name, true);
-            var blobName = string.Format(CultureInfo.InvariantCulture, assignment.Name + "/{0:yyyy/MM/dd/HH/mm}/todayMarks.json", now);
-            await SaveJsonReport(executionContext, blobName, todayMarks);
-            blobName = assignment.Name + "/todayMarks.json";
-            await SaveJsonReport(executionContext, blobName, todayMarks);
-
-        }
-
-        private static async Task SaveJsonReport(ExecutionContext executionContext, string blobName, Dictionary<string, (Dictionary<string, int>, Dictionary<string, DateTime>)> calculateMarks)
-        {
-            var blob = GetCloudBlockBlobInReportContainer(executionContext, blobName);
-            blob.Properties.ContentType = "application/json";
-            using var ms = new MemoryStream();
-            using var writer = new StreamWriter(ms);
-            await writer.WriteAsync(JsonConvert.SerializeObject(calculateMarks));
-            await writer.FlushAsync();
-            ms.Position = 0;
-            await blob.UploadFromStreamAsync(ms);
-        }
-
-        private static async Task SaveExcelReport(ExecutionContext executionContext, string blobName, Stream excelMemoryStream)
-        {
-            var blob = GetCloudBlockBlobInReportContainer(executionContext, blobName);
-            blob.Properties.ContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-            excelMemoryStream.Position = 0;
-            await blob.UploadFromStreamAsync(excelMemoryStream);
-        }
-
-        private static CloudBlockBlob GetCloudBlockBlobInReportContainer(ExecutionContext executionContext, string blobName)
-        {
-            var container = GetCloudBlobContainer(executionContext, "report");
-            var blob = container.GetBlockBlobReference(blobName);
-            return blob;
-        }
-
-        private static CloudBlobContainer GetCloudBlobContainer(ExecutionContext executionContext, string containerName)
-        {
-            var storageAccount = CloudStorage.GetCloudStorageAccount(executionContext);
-            var blobClient = storageAccount.CreateCloudBlobClient();
-            var container = blobClient.GetContainerReference(containerName);
-            return container;
         }
     }
 }

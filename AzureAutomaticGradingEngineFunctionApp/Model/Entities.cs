@@ -11,7 +11,7 @@ namespace AzureAutomaticGradingEngineFunctionApp.Model
         public bool SendMarkEmailToStudents { get; set; }
         public DateTime GradeTime { get; set; }
         public ClassContext Context { get; set; }
-        
+
     }
 
     public class ClassContext
@@ -39,6 +39,13 @@ namespace AzureAutomaticGradingEngineFunctionApp.Model
         public Assignment assignment { get; set; }
         public string graderUrl { get; set; }
         public dynamic student { get; set; }
+    }
+
+
+    public class MarkDetails
+    {
+        public Dictionary<string, int> Mark { get; set; }
+        public Dictionary<string, DateTime> CompleteTime { get; set; }
     }
 
 }
