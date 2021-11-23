@@ -7,6 +7,11 @@ Project collaborators include [Chan Yiu Leung](https://www.linkedin.com/in/hades
 
 The project is being validated through usage on the course [Higher Diploma in Cloud and Data Centre Administration](https://www.vtc.edu.hk/admission/en/programme/it114115-higher-diploma-in-cloud-and-data-centre-administration/)
 
+
+## Microsoft Reactor - Getting started with Microsoft Azure Automatic Grading Engine
+[![Getting started with Microsoft Azure Automatic Grading Engine](http://img.youtube.com/vi/5jnVk8o8G7k/0.jpg)](https://youtu.be/5jnVk8o8G7k "Getting started with Microsoft Azure Automatic Grading Engine")
+
+
 ### Architecture
 
 ![Architecture](./images/GraderArchitecture.png)
