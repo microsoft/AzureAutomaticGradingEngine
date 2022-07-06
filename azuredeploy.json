@@ -87,13 +87,13 @@
               "value": "reference(concat('microsoft.insights/components/',parameters('uniqueName')), '2015-05-01').ConnectionString]"
             },
             {
-              "name": "AzureWebJobsStorage",
+              "name": "StorageAccountConnectionString",
               "value": "[concat('DefaultEndpointsProtocol=https;AccountName=',parameters('uniqueName'),';AccountKey=',listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('uniqueName')), '2019-06-01').keys[0].value,';EndpointSuffix=','core.windows.net')]"
             },
             {
-              "name": "storageTestResult",
+              "name": "AzureWebJobsStorage",
               "value": "[concat('DefaultEndpointsProtocol=https;AccountName=',parameters('uniqueName'),';AccountKey=',listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('uniqueName')), '2019-06-01').keys[0].value,';EndpointSuffix=','core.windows.net')]"
-            },
+            },    
             {
               "name": "WEBSITE_RUN_FROM_PACKAGE",
               "value": "[parameters('package')]"

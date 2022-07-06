@@ -1,18 +1,22 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFramework>netcoreapp3.1</TargetFramework>
+		<TargetFramework>net6.0</TargetFramework>
 		<AzureFunctionsVersion>v3</AzureFunctionsVersion>
 		<UserSecretsId>ffc469c3-dde5-4eb8-a9f2-b4f6484bfb3c</UserSecretsId>
 		<ApplicationInsightsResourceId>/subscriptions/183966e3-8333-4764-9c74-a0eb4f883571/resourceGroups/azureautomaticgradingengine/providers/microsoft.insights/components/AzureAutomaticGradingEngineFunctionApp</ApplicationInsightsResourceId>
 	</PropertyGroup>
 	<ItemGroup>
-		<PackageReference Include="ClosedXML" Version="0.95.4" />
+		<PackageReference Include="ClosedXML" Version="0.96.0" />
 		<PackageReference Include="Cronos" Version="0.7.1" />
+		<PackageReference Include="Azure.Data.Tables" Version="12.6.0" />
+		<PackageReference Include="Microsoft.Azure.Management.ContainerInstance.Fluent" Version="1.38.1" />
+		<PackageReference Include="Microsoft.Azure.Management.Fluent" Version="1.38.1" />
+		<PackageReference Include="Microsoft.Azure.Management.Msi.Fluent" Version="1.38.1" />
 		<PackageReference Include="Microsoft.AspNetCore.AzureKeyVault.HostingStartup" Version="2.0.4" />
-		<PackageReference Include="Microsoft.Azure.WebJobs.Extensions.DurableTask" Version="2.5.1" />
-		<PackageReference Include="Microsoft.Azure.WebJobs.Extensions.Storage" Version="3.0.11" />
-		<PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="3.1.20" />
-		<PackageReference Include="Microsoft.NET.Sdk.Functions" Version="3.0.13" />
+		<PackageReference Include="Microsoft.Azure.WebJobs.Extensions.DurableTask" Version="2.7.2" />
+		<PackageReference Include="Microsoft.Azure.WebJobs.Extensions.Storage" Version="5.0.1" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="6.0.1" />
+		<PackageReference Include="Microsoft.NET.Sdk.Functions" Version="4.1.1" />
 	</ItemGroup>
 	<ItemGroup>
 		<Resource Include=".gitignore" />

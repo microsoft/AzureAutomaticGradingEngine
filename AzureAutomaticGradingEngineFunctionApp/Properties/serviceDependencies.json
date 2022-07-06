@@ -1,9 +1,5 @@
 {
   "dependencies": {
-    "storageTestResult": {
-      "type": "storage",
-      "connectionId": "storageTestResult"
-    },
     "appInsights": {
       "type": "appInsights",
       "connectionId": "APPINSIGHTS_CONNECTIONSTRING"

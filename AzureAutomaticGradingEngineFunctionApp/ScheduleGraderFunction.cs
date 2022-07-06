@@ -19,6 +19,8 @@ using Cronos;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs.Extensions.Http;
+using AzureAutomaticGradingEngineFunctionApp.Dao;
+using AzureAutomaticGradingEngineFunctionApp.Poco;
 
 namespace AzureAutomaticGradingEngineFunctionApp
 {
@@ -58,7 +60,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
             [OrchestrationTrigger] IDurableOrchestrationContext context, ILogger log)
         {
             bool isManual = context.GetInput<bool>();
-            var assignments = await context.CallActivityAsync<List<Assignment>>(nameof(GetAssignmentList), isManual);
+            var assignments = await context.CallActivityAsync<List<AssignmentPoco>>(nameof(GetAssignmentList), isManual);
 
             log.LogInformation($"context {context.InstanceId} {context.IsReplaying} Assignment Count = '{assignments.Count()}' ignoreCronExpression:{isManual} ");
             var classJobs = new List<ClassGradingJob>();
@@ -95,7 +97,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
 
         
 
-        public static async Task AssignmentTasks(IDurableOrchestrationContext context, string activity, List<Assignment> assignments)
+        public static async Task AssignmentTasks(IDurableOrchestrationContext context, string activity, List<AssignmentPoco> assignments)
         {
             var retryOptions = new RetryOptions(
                 firstRetryInterval: TimeSpan.FromSeconds(5),
@@ -111,29 +113,21 @@ namespace AzureAutomaticGradingEngineFunctionApp
 
         [FunctionName(nameof(GetAssignmentList))]
 #pragma warning disable IDE0060 // Remove unused parameter
-        public static async Task<List<Assignment>> GetAssignmentList([ActivityTrigger] bool ignoreCronExpression, ExecutionContext executionContext, ILogger log
+        public static async Task<List<AssignmentPoco>> GetAssignmentList([ActivityTrigger] bool ignoreCronExpression, ExecutionContext executionContext, ILogger log
 #pragma warning restore IDE0060 // Remove unused parameter
     )
         {
             var storageAccount = CloudStorage.GetCloudStorageAccount(executionContext);
 
             var cloudTableClient = storageAccount.CreateCloudTableClient();
-            var assignmentsTable = cloudTableClient.GetTableReference("assignments");
-            await assignmentsTable.CreateIfNotExistsAsync();
-            var credentialsTable = cloudTableClient.GetTableReference("credentials");
-            await credentialsTable.CreateIfNotExistsAsync();
+            var config = new Config(executionContext);         
 
-            TableContinuationToken token = null;
-            var assignments = new List<AssignmentTableEntity>();
-            do
-            {
-                var queryResult = await assignmentsTable.ExecuteQuerySegmentedAsync(new TableQuery<AssignmentTableEntity>(), token);
-                assignments.AddRange(queryResult.Results);
-                token = queryResult.ContinuationToken;
-            } while (token != null);
+            var assignmentDao = new AssignmentDao(config, log);
+            var labCredentialDao = new LabCredentialDao(config, log);
+            var assignments = assignmentDao.GetAssignments();
 
             var now = DateTime.UtcNow;
-            bool IsTriggered(AssignmentTableEntity assignment)
+            bool IsTriggered(Assignment assignment)
             {
                 try
                 {
@@ -154,31 +148,21 @@ namespace AzureAutomaticGradingEngineFunctionApp
             if (!ignoreCronExpression)
                 assignments = assignments.Where(IsTriggered).ToList();
 
-            var results = new List<Assignment>();
+            var results = new List<AssignmentPoco>();
             foreach (var assignment in assignments)
             {
                 string graderUrl = assignment.GraderUrl;
                 string project = assignment.PartitionKey;
-                bool sendMarkEmailToStudents = assignment.SendMarkEmailToStudents.HasValue && assignment.SendMarkEmailToStudents.Value;
-
-                var credentialsTableEntities = new List<CredentialsTableEntity>();
-                do
-                {
-                    var queryResult = await credentialsTable.ExecuteQuerySegmentedAsync(
-                        new TableQuery<CredentialsTableEntity>().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, project)), token);
-                    credentialsTableEntities.AddRange(queryResult.Results);
-                    token = queryResult.ContinuationToken;
-                } while (token != null);
-
-
-                var students = credentialsTableEntities.Select(c => new
+                bool sendMarkEmailToStudents = assignment.SendMarkEmailToStudents.HasValue && assignment.SendMarkEmailToStudents.Value;    
+                var labCredentials = labCredentialDao.GetByProject(project);
+                var students = labCredentials.Select(c => new
                 {
                     email = c.RowKey,
-                    credentials = c.Credentials
+                    credentials = new { c.SubscriptionId,c.AppId,c.Tenant,c.Password}
                 }).ToArray();
 
 
-                results.Add(new Assignment
+                results.Add(new AssignmentPoco
                 {
                     Name = project,
                     TeacherEmail = assignment.TeacherEmail,
@@ -192,7 +176,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
         }
 
 
-        public static ClassGradingJob ToClassGradingJob(Assignment assignment)
+        public static ClassGradingJob ToClassGradingJob(AssignmentPoco assignment)
         {
             var graderUrl = assignment.Context.GraderUrl;
             dynamic students = JsonConvert.DeserializeObject(assignment.Context.Students);
@@ -274,7 +258,7 @@ Azure Automatic Grading Engine
         }
 
         [FunctionName(nameof(SaveAccumulatedMarkJson))]
-        public static async Task SaveAccumulatedMarkJson([ActivityTrigger] Assignment assignment,
+        public static async Task SaveAccumulatedMarkJson([ActivityTrigger] AssignmentPoco assignment,
             ExecutionContext executionContext,
             ILogger log)
         {
