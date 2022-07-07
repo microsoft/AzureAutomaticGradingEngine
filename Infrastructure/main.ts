@@ -77,14 +77,13 @@ class AzureAutomaticGradingEngineStack extends TerraformStack {
     })
     new TerraformOutput(this, "FunctionAppHostname", {
       value: azureFunctionConstruct.functionApp.name
-    });
+    })
     new TerraformOutput(this, "AzureFunctionBaseUrl", {
       value: `https://${azureFunctionConstruct.functionApp.name}.azurewebsites.net`
-    });
-    ///api/StudentRegistrationFunction
+    })
     new TerraformOutput(this, "StudentRegistrationFunctionUrl", {
       value: `https://${azureFunctionConstruct.functionApp.name}.azurewebsites.net/api/StudentRegistrationFunction?email=xxx@abc.com&lab=examplelab`
-    });
+    })
   }
 }
 

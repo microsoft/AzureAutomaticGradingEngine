@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 using System.Web;
 using Microsoft.Extensions.Logging;
 
-namespace AzureAutomaticGradingEngineFunctionApp.Model;
+namespace AzureAutomaticGradingEngineFunctionApp.Poco;
 
 [DataContract]
 public abstract class JsonBase<T> where T : class
