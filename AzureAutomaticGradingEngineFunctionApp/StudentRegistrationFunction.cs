@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using AzureAutomaticGradingEngineFunctionApp.Dao;
 using AzureAutomaticGradingEngineFunctionApp.Helper;
@@ -6,6 +7,7 @@ using AzureAutomaticGradingEngineFunctionApp.Model;
 using AzureAutomaticGradingEngineFunctionApp.Poco;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Azure.Management.ResourceManager.Fluent;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
@@ -35,13 +37,11 @@ public static class StudentRegistrationFunction
             string email = req.Query["email"];
             var form = $@"
     <form id='form' method='post'>
-        <input type='hidden' id='classroomName' name='lab' value='{lab}'>
+        <input type='hidden' id='lab' name='lab' value='{lab}'>
         <label for='email'>Email:</label><br>
-        <input type='email' id='email' name='email' size='50' value='{email}' required><br>
-        <label for='subscriptionId'>Subscription ID:</label><br>
-        <input type='subscriptionId' id='subscriptionId' name='subscriptionId' size='50' required><br>
+        <input type='email' id='email' name='email' size='50' value='{email}' required><br>       
         Azure Credentials<br/>
-        <textarea name='credentials' required  rows='15' cols='100'></textarea>
+        <textarea name='credentials' required rows='15' cols='100'></textarea>
         <br/>
         <button type='submit'>Register</button>
     </form>
@@ -53,24 +53,23 @@ public static class StudentRegistrationFunction
         {
             log.LogInformation("POST Request");
             string lab = req.Form["lab"];
-            string email = req.Form["email"];
-            string subscriptionId = req.Form["subscriptionId"];
+            string email = req.Form["email"];            
             string credentialJsonString = req.Form["credentials"];
             log.LogInformation("Student Register: " + email + " Lab:" + lab);
-            if (string.IsNullOrWhiteSpace(email) ||
-                string.IsNullOrWhiteSpace(subscriptionId) ||
+            if (string.IsNullOrWhiteSpace(email) ||               
                 string.IsNullOrWhiteSpace(credentialJsonString))
                 return GetContentResult("Missing Data and Registration Failed!");
             email = email.Trim().ToLower();
-            var isValidSubscriptionId = Guid.TryParse(subscriptionId, out _);
-            if (!isValidSubscriptionId)
-                return GetContentResult("Invalid Subscription ID format and Registration Failed!");
+
 
             var config = new Config(context);
             var subscriptionDao = new SubscriptionDao(config, log);
             var labCredentialDao = new LabCredentialDao(config, log);
-
             var credential = AppPrincipal.FromJson(credentialJsonString, log);
+
+            var AzureCredentials = SdkContext.AzureCredentialsFactory.FromServicePrincipal(credential.appId, credential.password, credential.tenant, AzureEnvironment.AzureGlobalCloud);
+            var authenticated = Microsoft.Azure.Management.Fluent.Azure.Configure().Authenticate(AzureCredentials);
+            string subscriptionId = authenticated.Subscriptions.List().First<ISubscription>().SubscriptionId;
 
             if (string.IsNullOrWhiteSpace(lab))
             {

@@ -1,7 +1,6 @@
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.DurableTask;
 using Microsoft.Extensions.Logging;
-using Microsoft.WindowsAzure.Storage.Table;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -102,8 +101,8 @@ namespace AzureAutomaticGradingEngineFunctionApp
             var retryOptions = new RetryOptions(
                 firstRetryInterval: TimeSpan.FromSeconds(5),
                 maxNumberOfAttempts: 1);
-            var task = new Task[assignments.Count()];
-            for (var i = 0; i < assignments.Count(); i++)
+            var task = new Task[assignments.Count];
+            for (var i = 0; i < assignments.Count; i++)
             {
                 task[i] = context.CallActivityWithRetryAsync(activity, retryOptions, assignments[i]);
             }
@@ -113,7 +112,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
 
         [FunctionName(nameof(GetAssignmentList))]
 #pragma warning disable IDE0060 // Remove unused parameter
-        public static async Task<List<AssignmentPoco>> GetAssignmentList([ActivityTrigger] bool ignoreCronExpression, ExecutionContext executionContext, ILogger log
+        public static List<AssignmentPoco> GetAssignmentList([ActivityTrigger] bool ignoreCronExpression, ExecutionContext executionContext, ILogger log
 #pragma warning restore IDE0060 // Remove unused parameter
     )
         {

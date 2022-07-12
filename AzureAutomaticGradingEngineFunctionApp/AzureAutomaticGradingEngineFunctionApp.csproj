@@ -8,11 +8,10 @@
 	<ItemGroup>
 		<PackageReference Include="ClosedXML" Version="0.96.0" />
 		<PackageReference Include="Cronos" Version="0.7.1" />
-		<PackageReference Include="Azure.Data.Tables" Version="12.6.0" />
+		<PackageReference Include="Azure.Data.Tables" Version="12.6.1" />
 		<PackageReference Include="Microsoft.Azure.Management.ContainerInstance.Fluent" Version="1.38.1" />
 		<PackageReference Include="Microsoft.Azure.Management.Fluent" Version="1.38.1" />
 		<PackageReference Include="Microsoft.Azure.Management.Msi.Fluent" Version="1.38.1" />
-		<PackageReference Include="Microsoft.AspNetCore.AzureKeyVault.HostingStartup" Version="2.0.4" />
 		<PackageReference Include="Microsoft.Azure.WebJobs.Extensions.DurableTask" Version="2.7.2" />
 		<PackageReference Include="Microsoft.Azure.WebJobs.Extensions.Storage" Version="5.0.1" />
 		<PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="6.0.1" />
