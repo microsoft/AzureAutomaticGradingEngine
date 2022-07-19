@@ -81,7 +81,7 @@ https://XXXXXX.azurewebsites.net/api/StudentRegistrationFunction?project=Assignm
 Note: 
 
 1. Subscription ID and Email must be unique for each assignment.
-2. Don't run <code>az ad sp create-for-rbac -n "gradingengine" --sdk-auth</code> repeatedly! Students need to submit the online form again with the new credentials.
+2. Don't run <code>az ad sp create-for-rbac -n "AzureAutomaticGradingEngine" --role="Contributor" --scopes="/subscriptions/your-subscriptions-id"</code> repeatedly! Students need to submit the online form again with the new credentials.
 
 ## Generate the Prebuilt package
 
