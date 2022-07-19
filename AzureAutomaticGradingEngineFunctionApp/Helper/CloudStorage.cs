@@ -5,9 +5,8 @@ using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Azure;
-using AzureAutomaticGradingEngineFunctionApp.Model;
+using AzureAutomaticGradingEngineFunctionApp.Poco;
 using Microsoft.Azure.WebJobs;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
@@ -19,12 +18,8 @@ namespace AzureAutomaticGradingEngineFunctionApp.Helper
     {
         public static CloudStorageAccount GetCloudStorageAccount(ExecutionContext executionContext)
         {
-            var config = new ConfigurationBuilder()
-                            .SetBasePath(executionContext.FunctionAppDirectory)
-                            .AddJsonFile("local.settings.json", true, true)
-                            .AddEnvironmentVariables().Build();
-            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(config["storageTestResult"]);
-            return storageAccount;
+            var config = new Config(executionContext);
+            return CloudStorageAccount.Parse(config.GetConfig(Config.Key.StorageAccountConnectionString));       
         }
         public static async Task<List<IListBlobItem>> ListBlobsFlatListing(CloudBlobContainer cloudBlobContainer, string prefix, ILogger log, bool isToday)
         {

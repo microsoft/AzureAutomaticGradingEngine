@@ -15,6 +15,7 @@ namespace AzureAutomaticGradingEngineFunctionApp.Helper
 
         public enum Key
         {
+            StorageAccountConnectionString,
             EmailSmtp,
             EmailUserName,
             EmailPassword,

@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Text;
 using System.Threading.Tasks;
 using AzureAutomaticGradingEngineFunctionApp.Helper;
-using AzureAutomaticGradingEngineFunctionApp.Model;
+using AzureAutomaticGradingEngineFunctionApp.Poco;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.DurableTask;
 using Microsoft.Extensions.Logging;
@@ -31,13 +30,13 @@ namespace AzureAutomaticGradingEngineFunctionApp
         public static async Task DailyGraderOrchestrationFunction(
             [OrchestrationTrigger] IDurableOrchestrationContext context, ILogger log)
         {
-            var assignments = await context.CallActivityAsync<List<Assignment>>(nameof(GetAssignmentList), true);
-            await ScheduleGraderFunction.AssignmentTasks(context, nameof(SaveTodayMarkJson), assignments);
+            var assignments = await context.CallActivityAsync<List<AssignmentPoco>>(nameof(GetAssignmentList), true);
+            await AssignmentTasks(context, nameof(SaveTodayMarkJson), assignments);
             Console.WriteLine("Completed!");
         }
 
         [FunctionName(nameof(SaveTodayMarkJson))]
-        public static async Task SaveTodayMarkJson([ActivityTrigger] Assignment assignment,
+        public static async Task SaveTodayMarkJson([ActivityTrigger] AssignmentPoco assignment,
             ExecutionContext executionContext,
             ILogger log)
         {

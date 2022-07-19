@@ -18,28 +18,12 @@ The project is being validated through usage on the course [Higher Diploma in Cl
 
 You can read more about this project at [Microsoft Educator Developer TechCommunity](https://techcommunity.microsoft.com/t5/educator-developer-blog/microsoft-azure-automatic-grading-engine-oct-2021-update/ba-p/2849141?WT.mc_id=academic-39457-leestott)
 
-## ARM Deployment 
-
-Azure Resource Manager templates (ARM templates) are used as an easy way to deploy services to Azure. 
-
-If you are interested in learning more about ARM see the following Microsoft Learn Module [Deploy and manage resource manager templates](https://docs.microsoft.com/learn/paths/deploy-manage-resource-manager-templates/). In this module you will learn about the structure of the template and the tools you will need for working with templates. If you want to learn about the benefits of using templates and why you should automate deployment with templates, see the [ARM template overview](https://docs.microsoft.com/azure/azure-resource-manager/templates/overview). 
-
-## To deploy, click the `Deploy to Azure` button 
-
-[![Deploy To Azure](https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/deploytoazure.svg?sanitize=true)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2FAzureAutomaticGradingEngine%2Fmain%2Fazuredeploy.json)
-
-Deployment URL for ARM Template 
-
-https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2FAzureAutomaticGradingEngine%2Fmain%2Fazuredeploy.json 
-
-## Deployment Walkthrough and Demo
-
-[![How to deploy Azure Automatic Grading Engine with ARM](http://img.youtube.com/vi/tf4GnPIrDuI/0.jpg)](https://youtu.be/tf4GnPIrDuI "How to deploy Azure Automatic Grading Engine with ARM.")
-
-Please skip the setup section as the latest ARM can help you deploy eveything! However this old video can teach you how to rebuild and deploy your own test.
-
-[![How to deploy Azure Automatic Grading Engine without ARM](http://img.youtube.com/vi/LClFO3OkThY/0.jpg)](https://youtu.be/LClFO3OkThY "How to deploy Azure Automatic Grading Engine without ARM.")
-
+## CDK-TF Deployment 
+You have to refer [Object Oriented Your Azure Infrastructure with Cloud Development Kit for Terraform (CDKTF)](https://techcommunity.microsoft.com/t5/educator-developer-blog/object-oriented-your-azure-infrastructure-with-cloud-development/ba-p/3474715) and setup your CDK-TF.
+```
+npm i
+cdktf deploy --auto-approve
+```
 
 ## Config SMTP
 You have to set the App Settings Key during deployment or in the Azure Portal. If you want to use Gmail, you need to allow [Less Secure Apps](https://myaccount.google.com/lesssecureapps) for your Gmail.
@@ -86,18 +70,18 @@ https://somethingunique.azurewebsites.net/api/StudentRegistrationFunction?projec
 2.	Check your Subscription ID
 3.	Open Cloud Shell
 4.	Change your subscription
-<code>az account set --subscription <your-subscriptions-id></code>
+<code>az account set --subscription your-subscriptions-id</code>
 5.	Check the current subscriptions
 <code>az account show</code>
-6.	Create SDK Auth, keep it privately and don't run this command again
-<code>az ad sp create-for-rbac -n "gradingengine" --sdk-auth</code>
+6.	Create Subscriptions Contributor, keep it privately and don't run this command again
+<code>az ad sp create-for-rbac -n "AzureAutomaticGradingEngine" --role="Contributor" --scopes="/subscriptions/your-subscriptions-id"</code>
 7.	Submit the online registration form.
 https://XXXXXX.azurewebsites.net/api/StudentRegistrationFunction?project=AssignmentName&email=abcd@stu.vtc.edu.hk
 
 Note: 
 
 1. Subscription ID and Email must be unique for each assignment.
-2. Don't run <code>az ad sp create-for-rbac -n "gradingengine" --sdk-auth</code> repeatedly! Students need to submit the online form again with the new credentials.
+2. Don't run <code>az ad sp create-for-rbac -n "AzureAutomaticGradingEngine" --role="Contributor" --scopes="/subscriptions/your-subscriptions-id"</code> repeatedly! Students need to submit the online form again with the new credentials.
 
 ## Generate the Prebuilt package
 
