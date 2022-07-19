@@ -6,6 +6,9 @@ import { AzureFunctionLinuxConstruct } from "azure-common-construct/patterns/Azu
 import path = require("path");
 import { PublishMode } from "azure-common-construct/patterns/PublisherConstruct";
 
+import * as dotenv from 'dotenv';
+dotenv.config({ path: __dirname + '/.env' });
+
 class AzureAutomaticGradingEngineStack extends TerraformStack {
   constructor(scope: Construct, name: string) {
     super(scope, name);
@@ -57,8 +60,7 @@ class AzureAutomaticGradingEngineStack extends TerraformStack {
       })
     )
 
-    const appSettings = {  
-      "CalendarUrl": process.env.CALENDAR_URL!,
+    const appSettings = {       
       "EmailSmtp": process.env.EMAIL_SMTP!,
       "CommunicationServiceConnectionString": process.env.COMMUNICATION_SERVICE_CONNECTION_STRING!,
       "EmailUserName": process.env.EMAIL_USERNAME!,
