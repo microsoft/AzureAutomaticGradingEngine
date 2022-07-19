@@ -94,7 +94,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
             Console.WriteLine("Completed!");
         }
 
-        
+
 
         public static async Task AssignmentTasks(IDurableOrchestrationContext context, string activity, List<AssignmentPoco> assignments)
         {
@@ -119,7 +119,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
             var storageAccount = CloudStorage.GetCloudStorageAccount(executionContext);
 
             var cloudTableClient = storageAccount.CreateCloudTableClient();
-            var config = new Config(executionContext);         
+            var config = new Config(executionContext);
 
             var assignmentDao = new AssignmentDao(config, log);
             var labCredentialDao = new LabCredentialDao(config, log);
@@ -152,12 +152,12 @@ namespace AzureAutomaticGradingEngineFunctionApp
             {
                 string graderUrl = assignment.GraderUrl;
                 string project = assignment.PartitionKey;
-                bool sendMarkEmailToStudents = assignment.SendMarkEmailToStudents.HasValue && assignment.SendMarkEmailToStudents.Value;    
+                bool sendMarkEmailToStudents = assignment.SendMarkEmailToStudents.HasValue && assignment.SendMarkEmailToStudents.Value;
                 var labCredentials = labCredentialDao.GetByProject(project);
                 var students = labCredentials.Select(c => new
                 {
                     email = c.RowKey,
-                    credentials = new { c.SubscriptionId,c.AppId,c.Tenant,c.Password}
+                    credentials = new { appId = c.AppId, displayName= c.DisplayName, tenant = c.Tenant, password = c.Password }
                 }).ToArray();
 
 

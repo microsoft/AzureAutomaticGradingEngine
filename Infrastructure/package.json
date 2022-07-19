@@ -23,7 +23,8 @@
     "azure-common-construct": "^0.0.48",
     "cdktf": "^0.11.2",
     "cdktf-azure-providers": "^0.0.4",
-    "constructs": "^10.1.43"
+    "constructs": "^10.1.43",
+    "dotenv": "^16.0.1"
   },
   "devDependencies": {
     "@types/jest": "^28.1.4",
