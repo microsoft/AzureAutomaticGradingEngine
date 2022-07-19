@@ -3,11 +3,7 @@
     "storageAzureWebJobs": {
       "type": "storage",
       "connectionId": "AzureWebJobsStorage"
-    },
-    "storageTestResult": {
-      "type": "storage",
-      "connectionId": "storageTestResult"
-    },
+    },  
     "appInsights": {
       "resourceId": "/subscriptions/[parameters('subscriptionId')]/resourceGroups/[parameters('resourceGroupName')]/providers/microsoft.insights/components/AzureAutomaticGradingEngineFunctionApp",
       "type": "appInsights.azure",

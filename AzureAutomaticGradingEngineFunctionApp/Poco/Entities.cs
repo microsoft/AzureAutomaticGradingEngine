@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace AzureAutomaticGradingEngineFunctionApp.Model
+namespace AzureAutomaticGradingEngineFunctionApp.Poco
 {
-    public class Assignment
+    public class AssignmentPoco
     {
         public string Name { get; set; }
         public string TeacherEmail { get; set; }
@@ -29,14 +29,14 @@ namespace AzureAutomaticGradingEngineFunctionApp.Model
 
     public class ClassGradingJob
     {
-        public Assignment assignment { get; set; }
+        public AssignmentPoco assignment { get; set; }
         public string graderUrl { get; set; }
         public dynamic students { get; set; }
     }
 
     public class SingleGradingJob
     {
-        public Assignment assignment { get; set; }
+        public AssignmentPoco assignment { get; set; }
         public string graderUrl { get; set; }
         public dynamic student { get; set; }
     }

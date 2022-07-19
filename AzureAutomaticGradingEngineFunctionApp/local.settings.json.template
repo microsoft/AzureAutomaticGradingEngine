@@ -8,8 +8,8 @@
     "EmailUserName": "XXXX@gmail.com",
     "EmailPassword": "XAXAXAXAXAXA",
     "EmailFromAddress": "XXXX@gmail.com",
+    "StorageAccountConnectionString": "",
     "AzureWebJobsStorage": "<Fill in the Connection String>",
-    "storageTestResult": "<Fill in the Connection String>",
     "FUNCTIONS_WORKER_RUNTIME": "dotnet"
   }
 }
