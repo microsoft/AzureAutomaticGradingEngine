@@ -73,8 +73,8 @@ https://somethingunique.azurewebsites.net/api/StudentRegistrationFunction?projec
 <code>az account set --subscription <your-subscriptions-id></code>
 5.	Check the current subscriptions
 <code>az account show</code>
-6.	Create SDK Auth, keep it privately and don't run this command again
-<code>az ad sp create-for-rbac -n "gradingengine" --sdk-auth</code>
+6.	Create Subscriptions Contributor, keep it privately and don't run this command again
+<code>az ad sp create-for-rbac -n "AzureAutomaticGradingEngine" --role="Contributor" --scopes="/subscriptions/<your-subscriptions-id>"</code>
 7.	Submit the online registration form.
 https://XXXXXX.azurewebsites.net/api/StudentRegistrationFunction?project=AssignmentName&email=abcd@stu.vtc.edu.hk
 
