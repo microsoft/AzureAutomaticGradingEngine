@@ -61,11 +61,11 @@ namespace AzureAutomaticGradingEngineFunctionApp
             bool isManual = context.GetInput<bool>();
             var assignments = await context.CallActivityAsync<List<AssignmentPoco>>(nameof(GetAssignmentList), isManual);
 
-            log.LogInformation($"context {context.InstanceId} {context.IsReplaying} Assignment Count = '{assignments.Count()}' ignoreCronExpression:{isManual} ");
+            log.LogInformation($"context {context.InstanceId} {context.IsReplaying} Assignment Count = '{assignments.Count}' ignoreCronExpression:{isManual} ");
             var classJobs = new List<ClassGradingJob>();
-            for (var i = 0; i < assignments.Count(); i++)
+            for (var i = 0; i < assignments.Count; i++)
             {
-                classJobs.Add(ToClassGradingJob(assignments[i]));
+                classJobs.Add(ToClassGradingJob(assignments[i], log));
             }
             var retryOptions = new RetryOptions(
                 firstRetryInterval: TimeSpan.FromSeconds(5),
@@ -91,7 +91,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
 
             await AssignmentTasks(context, nameof(SaveAccumulatedMarkJson), assignments);
 
-            Console.WriteLine("Completed!");
+            log.LogInformation("Completed!");
         }
 
 
@@ -157,7 +157,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
                 var students = labCredentials.Select(c => new
                 {
                     email = c.RowKey,
-                    credentials = new { appId = c.AppId, displayName= c.DisplayName, tenant = c.Tenant, password = c.Password }
+                    credentials = new { appId = c.AppId, displayName = c.DisplayName, tenant = c.Tenant, password = c.Password }
                 }).ToArray();
 
 
@@ -175,11 +175,11 @@ namespace AzureAutomaticGradingEngineFunctionApp
         }
 
 
-        public static ClassGradingJob ToClassGradingJob(AssignmentPoco assignment)
+        public static ClassGradingJob ToClassGradingJob(AssignmentPoco assignment, ILogger log)
         {
             var graderUrl = assignment.Context.GraderUrl;
             dynamic students = JsonConvert.DeserializeObject(assignment.Context.Students);
-            Console.WriteLine(assignment.Name + ":" + students.Count);
+            log.LogInformation(assignment.Name + ":" + (int)students.Count);
             return new ClassGradingJob() { assignment = assignment, graderUrl = graderUrl, students = students };
         }
 
@@ -207,12 +207,12 @@ namespace AzureAutomaticGradingEngineFunctionApp
                     EmailTestResultToStudent(context, log, job.assignment.Name, job.student.email.ToString(), xml, job.assignment.GradeTime);
                 watch.Stop();
                 var elapsedMs = watch.ElapsedMilliseconds;
-                Console.WriteLine(job.student.email + " get test result in " + elapsedMs + "ms.");
+                log.LogInformation((job.student.email as string) + " get test result in " + elapsedMs + "ms.");
             }
             catch (Exception ex)
             {
-                Console.WriteLine(job.student.email + " in error.");
-                Console.WriteLine(ex);
+                log.LogInformation((job.student.email as string) + " in error.");
+                log.LogInformation(ex.ToString());
             }
         }
 
