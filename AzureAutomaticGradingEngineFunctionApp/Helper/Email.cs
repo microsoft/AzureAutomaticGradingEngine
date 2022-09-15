@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Net.Mail;
-using AzureAutomaticGradingEngineFunctionApp.Model;
+using AzureAutomaticGradingEngineFunctionApp.Poco;
 using Microsoft.Extensions.Logging;
 
 namespace AzureAutomaticGradingEngineFunctionApp.Helper
