@@ -200,8 +200,9 @@ namespace AzureAutomaticGradingEngineFunctionApp
             try
             {
                 var watch = System.Diagnostics.Stopwatch.StartNew();
-                var xml = await client.GetStringAsync(uri);
-
+                log.LogInformation("Calling grader URL for email -> " + (job.student.email as string));
+                var xml = await client.GetStringAsync(uri);     
+                
                 await CloudStorage.SaveTestResult(container, job.assignment.Name, job.student.email.ToString(), xml, job.assignment.GradeTime);
                 if (job.assignment.SendMarkEmailToStudents)
                     EmailTestResultToStudent(context, log, job.assignment.Name, job.student.email.ToString(), xml, job.assignment.GradeTime);
