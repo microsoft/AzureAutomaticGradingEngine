@@ -47,7 +47,6 @@ namespace AzureAutomaticGradingEngineFunctionApp
             [DurableClient] IDurableOrchestrationClient starter
         )
         {
-
             var instanceId = await starter.StartNewAsync(nameof(GraderOrchestrationFunction), null, true);
             log.LogInformation($"Started orchestration with ID = '{instanceId}'.");
 
@@ -61,23 +60,21 @@ namespace AzureAutomaticGradingEngineFunctionApp
             bool isManual = context.GetInput<bool>();
             var assignments = await context.CallActivityAsync<List<AssignmentPoco>>(nameof(GetAssignmentList), isManual);
 
-            log.LogInformation($"context {context.InstanceId} {context.IsReplaying} Assignment Count = '{assignments.Count()}' ignoreCronExpression:{isManual} ");
+            log.LogInformation($"context {context.InstanceId} {context.IsReplaying} Assignment Count = '{assignments.Count}' ignoreCronExpression:{isManual} ");
             var classJobs = new List<ClassGradingJob>();
-            for (var i = 0; i < assignments.Count(); i++)
+            for (var i = 0; i < assignments.Count; i++)
             {
-                classJobs.Add(ToClassGradingJob(assignments[i]));
+                classJobs.Add(ToClassGradingJob(assignments[i], log));
             }
-            var retryOptions = new RetryOptions(
-                firstRetryInterval: TimeSpan.FromSeconds(5),
-                maxNumberOfAttempts: 1);
+
             foreach (var classGradingJob in classJobs)
             {
                 var gradingTasks = new Task[classGradingJob.students.Count];
                 var i = 0;
-                foreach (dynamic student in classGradingJob.students)
+                foreach (Student student in classGradingJob.students)
                 {
-                    gradingTasks[i] = context.CallActivityWithRetryAsync<Task>(
-                        nameof(RunAndSaveTestResult), retryOptions,
+                    gradingTasks[i] = context.CallActivityAsync<Task>(
+                        nameof(RunAndSaveTestResult),
                         new SingleGradingJob
                         {
                             assignment = classGradingJob.assignment,
@@ -91,7 +88,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
 
             await AssignmentTasks(context, nameof(SaveAccumulatedMarkJson), assignments);
 
-            Console.WriteLine("Completed!");
+            log.LogInformation("Completed!");
         }
 
 
@@ -100,7 +97,8 @@ namespace AzureAutomaticGradingEngineFunctionApp
         {
             var retryOptions = new RetryOptions(
                 firstRetryInterval: TimeSpan.FromSeconds(5),
-                maxNumberOfAttempts: 1);
+                maxNumberOfAttempts: 1
+                );
             var task = new Task[assignments.Count];
             for (var i = 0; i < assignments.Count; i++)
             {
@@ -154,12 +152,11 @@ namespace AzureAutomaticGradingEngineFunctionApp
                 string project = assignment.PartitionKey;
                 bool sendMarkEmailToStudents = assignment.SendMarkEmailToStudents.HasValue && assignment.SendMarkEmailToStudents.Value;
                 var labCredentials = labCredentialDao.GetByProject(project);
-                var students = labCredentials.Select(c => new
+                var students = labCredentials.Select(c => new Student
                 {
                     email = c.RowKey,
-                    credentials = new { appId = c.AppId, displayName= c.DisplayName, tenant = c.Tenant, password = c.Password }
-                }).ToArray();
-
+                    credentials = new Confidential { appId = c.AppId, displayName = c.DisplayName, tenant = c.Tenant, password = c.Password }
+                }).ToList();
 
                 results.Add(new AssignmentPoco
                 {
@@ -167,7 +164,7 @@ namespace AzureAutomaticGradingEngineFunctionApp
                     TeacherEmail = assignment.TeacherEmail,
                     SendMarkEmailToStudents = sendMarkEmailToStudents,
                     GradeTime = now,
-                    Context = new ClassContext() { GraderUrl = graderUrl, Students = JsonConvert.SerializeObject(students) }
+                    Context = new ClassContext() { GraderUrl = graderUrl, Students = students }
                 });
 
             }
@@ -175,11 +172,11 @@ namespace AzureAutomaticGradingEngineFunctionApp
         }
 
 
-        public static ClassGradingJob ToClassGradingJob(AssignmentPoco assignment)
+        public static ClassGradingJob ToClassGradingJob(AssignmentPoco assignment, ILogger log)
         {
             var graderUrl = assignment.Context.GraderUrl;
-            dynamic students = JsonConvert.DeserializeObject(assignment.Context.Students);
-            Console.WriteLine(assignment.Name + ":" + students.Count);
+            List<Student> students = assignment.Context.Students;
+            log.LogInformation(assignment.Name + ":" + students.Count);
             return new ClassGradingJob() { assignment = assignment, graderUrl = graderUrl, students = students };
         }
 
@@ -191,15 +188,17 @@ namespace AzureAutomaticGradingEngineFunctionApp
 #pragma warning disable IDE0017 // Simplify object initialization
             var client = new HttpClient();
 #pragma warning restore IDE0017 // Simplify object initialization
-            client.Timeout = TimeSpan.FromMinutes(3);
+            client.Timeout = TimeSpan.FromMinutes(8);
             var queryPair = new NameValueCollection();
-            queryPair.Set("credentials", job.student.credentials.ToString());
+
+            queryPair.Set("credentials", JsonConvert.SerializeObject(job.student.credentials));
             queryPair.Set("trace", job.student.email.ToString());
 
             var uri = new Uri(job.graderUrl + ToQueryString(queryPair));
             try
             {
                 var watch = System.Diagnostics.Stopwatch.StartNew();
+                log.LogInformation("Calling grader URL for email -> " + job.student.email);
                 var xml = await client.GetStringAsync(uri);
 
                 await CloudStorage.SaveTestResult(container, job.assignment.Name, job.student.email.ToString(), xml, job.assignment.GradeTime);
@@ -207,12 +206,12 @@ namespace AzureAutomaticGradingEngineFunctionApp
                     EmailTestResultToStudent(context, log, job.assignment.Name, job.student.email.ToString(), xml, job.assignment.GradeTime);
                 watch.Stop();
                 var elapsedMs = watch.ElapsedMilliseconds;
-                Console.WriteLine(job.student.email + " get test result in " + elapsedMs + "ms.");
+                log.LogInformation(job.student.email + " get test result in " + elapsedMs + "ms.");
             }
             catch (Exception ex)
             {
-                Console.WriteLine(job.student.email + " in error.");
-                Console.WriteLine(ex);
+                log.LogInformation(job.student.email + " in error.");
+                log.LogInformation(ex.ToString());
             }
         }
 

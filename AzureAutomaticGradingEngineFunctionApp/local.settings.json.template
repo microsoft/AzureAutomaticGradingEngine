@@ -4,7 +4,7 @@
     "CORS": "*"
   },
   "Values": {
-    "Smtp": "smtp.gmail.com",
+    "EmailSmtp": "smtp.gmail.com",
     "EmailUserName": "XXXX@gmail.com",
     "EmailPassword": "XAXAXAXAXAXA",
     "EmailFromAddress": "XXXX@gmail.com",

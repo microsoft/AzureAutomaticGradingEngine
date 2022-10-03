@@ -1,6 +1,6 @@
-﻿using System;
+﻿using AzureAutomaticGradingEngineFunctionApp.Model;
+using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace AzureAutomaticGradingEngineFunctionApp.Poco
 {
@@ -17,7 +17,7 @@ namespace AzureAutomaticGradingEngineFunctionApp.Poco
     public class ClassContext
     {
         public string GraderUrl { get; set; }
-        public string Students { get; set; }
+        public List<Student> Students { get; set; }
     }
 
     public class EmailMessage
@@ -31,14 +31,14 @@ namespace AzureAutomaticGradingEngineFunctionApp.Poco
     {
         public AssignmentPoco assignment { get; set; }
         public string graderUrl { get; set; }
-        public dynamic students { get; set; }
+        public List<Student> students { get; set; }
     }
 
     public class SingleGradingJob
     {
         public AssignmentPoco assignment { get; set; }
         public string graderUrl { get; set; }
-        public dynamic student { get; set; }
+        public Student student { get; set; }
     }
 
 
