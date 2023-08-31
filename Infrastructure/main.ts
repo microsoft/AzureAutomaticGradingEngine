@@ -1,7 +1,12 @@
 import { Construct } from "constructs";
 import { App, TerraformOutput, TerraformStack } from "cdktf";
-import { AzurermProvider, ResourceGroup, StorageAccount, StorageQueue, StorageTable, StorageContainer } from "cdktf-azure-providers/.gen/providers/azurerm";
-import { StringResource } from 'cdktf-azure-providers/.gen/providers/random'
+import { AzurermProvider } from "cdktf-azure-providers/.gen/providers/azurerm/azurerm-provider";
+import { ResourceGroup } from "cdktf-azure-providers/.gen/providers/azurerm/resource-group";
+import { StorageAccount } from "cdktf-azure-providers/.gen/providers/azurerm/storage-account";
+import { StorageQueue } from "cdktf-azure-providers/.gen/providers/azurerm/storage-queue";
+import { StorageTable } from "cdktf-azure-providers/.gen/providers/azurerm/storage-table";
+import { StorageContainer } from "cdktf-azure-providers/.gen/providers/azurerm/storage-container";
+import { StringResource } from 'cdktf-azure-providers/.gen/providers/random/string-resource'
 import { AzureFunctionLinuxConstruct } from "azure-common-construct/patterns/AzureFunctionLinuxConstruct";
 import path = require("path");
 import { PublishMode } from "azure-common-construct/patterns/PublisherConstruct";
@@ -60,7 +65,7 @@ class AzureAutomaticGradingEngineStack extends TerraformStack {
       })
     )
 
-    const appSettings = {       
+    const appSettings = {
       "EmailSmtp": process.env.EMAIL_SMTP!,
       "CommunicationServiceConnectionString": process.env.COMMUNICATION_SERVICE_CONNECTION_STRING!,
       "EmailUserName": process.env.EMAIL_USERNAME!,
