@@ -53,10 +53,10 @@ public static class StudentRegistrationFunction
         {
             log.LogInformation("POST Request");
             string lab = req.Form["lab"];
-            string email = req.Form["email"];            
+            string email = req.Form["email"];
             string credentialJsonString = req.Form["credentials"];
             log.LogInformation("Student Register: " + email + " Lab:" + lab);
-            if (string.IsNullOrWhiteSpace(email) ||               
+            if (string.IsNullOrWhiteSpace(email) ||
                 string.IsNullOrWhiteSpace(credentialJsonString))
                 return GetContentResult("Missing Data and Registration Failed!");
             email = email.Trim().ToLower();

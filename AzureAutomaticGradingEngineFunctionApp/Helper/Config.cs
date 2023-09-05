@@ -23,7 +23,7 @@ namespace AzureAutomaticGradingEngineFunctionApp.Helper
             Environment
         };
 
-        public string GetConfig( Key key)
+        public string GetConfig(Key key)
         {
             var config = new ConfigurationBuilder()
                 .SetBasePath(_context.FunctionAppDirectory)

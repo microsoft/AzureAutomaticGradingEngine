@@ -70,8 +70,6 @@ class AzureAutomaticGradingEngineStack extends TerraformStack {
     )
 
     const appSettings = {
-      "FUNCTIONS_WORKER_RUNTIME":"dotnet-isolated",
-      "linuxFxVersion": "DOTNET-ISOLATED|6.0",
       "EmailSmtp": process.env.EMAIL_SMTP!,
       "CommunicationServiceConnectionString": process.env.COMMUNICATION_SERVICE_CONNECTION_STRING!,
       "EmailUserName": process.env.EMAIL_USERNAME!,
