@@ -19,7 +19,11 @@ class AzureAutomaticGradingEngineStack extends TerraformStack {
     super(scope, name);
 
     new AzurermProvider(this, "AzureRm", {
-      features: {}
+      features: {
+        resourceGroup: {
+          preventDeletionIfContainsResources: false
+        }
+      }
     })
 
     const prefix = "GradingEngine"
@@ -66,6 +70,8 @@ class AzureAutomaticGradingEngineStack extends TerraformStack {
     )
 
     const appSettings = {
+      "FUNCTIONS_WORKER_RUNTIME":"dotnet-isolated",
+      "linuxFxVersion": "DOTNET-ISOLATED|6.0",
       "EmailSmtp": process.env.EMAIL_SMTP!,
       "CommunicationServiceConnectionString": process.env.COMMUNICATION_SERVICE_CONNECTION_STRING!,
       "EmailUserName": process.env.EMAIL_USERNAME!,
@@ -87,10 +93,10 @@ class AzureAutomaticGradingEngineStack extends TerraformStack {
       value: azureFunctionConstruct.functionApp.name
     })
     new TerraformOutput(this, "AzureFunctionBaseUrl", {
-      value: `https://${azureFunctionConstruct.functionApp.name}.azurewebsites.net`
+      value: `https://${azureFunctionConstruct.functionApp.defaultHostname}`
     })
     new TerraformOutput(this, "StudentRegistrationFunctionUrl", {
-      value: `https://${azureFunctionConstruct.functionApp.name}.azurewebsites.net/api/StudentRegistrationFunction?email=xxx@abc.com&lab=examplelab`
+      value: `https://${azureFunctionConstruct.functionApp.defaultHostname}/api/StudentRegistrationFunction?email=xxx@abc.com&lab=examplelab`
     })
   }
 }
