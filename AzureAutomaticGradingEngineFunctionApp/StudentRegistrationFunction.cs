@@ -67,8 +67,8 @@ public static class StudentRegistrationFunction
             var labCredentialDao = new LabCredentialDao(config, log);
             var credential = AppPrincipal.FromJson(credentialJsonString, log);
 
-            var AzureCredentials = SdkContext.AzureCredentialsFactory.FromServicePrincipal(credential.appId, credential.password, credential.tenant, AzureEnvironment.AzureGlobalCloud);
-            var authenticated = Microsoft.Azure.Management.Fluent.Azure.Configure().Authenticate(AzureCredentials);
+            var azureCredentials = SdkContext.AzureCredentialsFactory.FromServicePrincipal(credential.appId, credential.password, credential.tenant, AzureEnvironment.AzureGlobalCloud);
+            var authenticated = Microsoft.Azure.Management.Fluent.Azure.Configure().Authenticate(azureCredentials);
             string subscriptionId = authenticated.Subscriptions.List().First<ISubscription>().SubscriptionId;
 
             if (string.IsNullOrWhiteSpace(lab))

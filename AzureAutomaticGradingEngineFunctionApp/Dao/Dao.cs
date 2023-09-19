@@ -71,4 +71,17 @@ internal abstract class Dao<T> where T : class, ITableEntity, new()
             return null;
         }
     }
+
+    public T Get(string partitionKey, string rowKey)
+    {
+        try
+        {
+            var response = TableClient.GetEntity<T>(partitionKey, rowKey);
+            return response.Value;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
 }
