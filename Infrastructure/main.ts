@@ -85,16 +85,15 @@ class AzureAutomaticGradingEngineStack extends TerraformStack {
       resourceGroup,
       appSettings,
       vsProjectPath: path.join(__dirname, "..", "AzureAutomaticGradingEngineFunctionApp/"),
-      publishMode: PublishMode.Always
+      publishMode: PublishMode.Always,
+      functionNames: ["GetApiKeyFunction"]
     })
-    new TerraformOutput(this, "FunctionAppHostname", {
-      value: azureFunctionConstruct.functionApp.name
-    })
-    new TerraformOutput(this, "AzureFunctionBaseUrl", {
-      value: `https://${azureFunctionConstruct.functionApp.defaultHostname}`
-    })
+
     new TerraformOutput(this, "StudentRegistrationFunctionUrl", {
       value: `https://${azureFunctionConstruct.functionApp.defaultHostname}/api/StudentRegistrationFunction?email=xxx@abc.com&lab=examplelab`
+    })
+    new TerraformOutput(this, "GetApiKeyFunctionUrl", {
+      value: azureFunctionConstruct.functionUrls!["GetApiKeyFunction"]
     })
   }
 }
