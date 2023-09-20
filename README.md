@@ -70,18 +70,18 @@ https://somethingunique.azurewebsites.net/api/StudentRegistrationFunction?projec
 2.	Check your Subscription ID
 3.	Open Cloud Shell
 4.	Change your subscription
-<code>az account set --subscription <your-subscriptions-id></code>
+<code>az account set --subscription your-subscriptions-id</code>
 5.	Check the current subscriptions
 <code>az account show</code>
 6.	Create Subscriptions Contributor, keep it privately and don't run this command again
-<code>az ad sp create-for-rbac -n "AzureAutomaticGradingEngine" --role="Contributor" --scopes="/subscriptions/<your-subscriptions-id>"</code>
+<code>az ad sp create-for-rbac -n "AzureAutomaticGradingEngine" --role="Contributor" --scopes="/subscriptions/your-subscriptions-id"</code>
 7.	Submit the online registration form.
 https://XXXXXX.azurewebsites.net/api/StudentRegistrationFunction?project=AssignmentName&email=abcd@stu.vtc.edu.hk
 
 Note: 
 
 1. Subscription ID and Email must be unique for each assignment.
-2. Don't run <code>az ad sp create-for-rbac -n "gradingengine" --sdk-auth</code> repeatedly! Students need to submit the online form again with the new credentials.
+2. Don't run <code>az ad sp create-for-rbac -n "AzureAutomaticGradingEngine" --role="Contributor" --scopes="/subscriptions/your-subscriptions-id"</code> repeatedly! Students need to submit the online form again with the new credentials.
 
 ## Generate the Prebuilt package
 
