@@ -2,10 +2,9 @@
 
 For any course testing Microsoft Azure, it is hard to assess or grade Azure projects manually. This project makes use of the technique of unit tests to grade students' Azure project settings automatically.
 
-This project has been developed by [Cyrus Wong]( https://www.linkedin.com/in/cyruswong) [Microsoft Learn Educator Ambassador](https://docs.microsoft.com/learn/roles/educator/learn-for-educators-overview/?WT.mc_id=academic-39456-leestott) in Association with the [Microsoft Next Generation Developer Relations Team](https://techcommunity.microsoft.com/t5/educator-developer-blog/bg-p/EducatorDeveloperBlog?WT.mc_id=academic-39457-leestott).
-Project collaborators include [Chan Yiu Leung](https://www.linkedin.com/in/hadeschan/), [So Ka Chun](https://www.linkedin.com/in/so-ka-chun-0643971a5/), [Lo Chun Hei](https://www.linkedin.com/in/chunhei-lo-86a9301b5/), [Ling Po Chu](https://www.linkedin.com/in/po-chu-ling-88392b1b5/), [Cheung Ho Shing](https://www.linkedin.com/in/cheunghoshing/) and [Pearly Law](https://www.linkedin.com/in/mei-ching-pearly-jean-law-172707171/) from the IT114115 Higher Diploma in Cloud and Data Centre Administration.
+This project has been developed by [Cyrus Wong]( https://www.linkedin.com/in/cyruswong) [Microsoft MVP Azure](https://mvp.microsoft.com/en-US/mvp/profile/86da86ff-8786-ed11-aad1-000d3a197333WT.mc_id=AZ-MVP-5005120) and [Microsoft Learn Educator Ambassador](https://docs.microsoft.com/learn/roles/educator/learn-for-educators-overview) in Association with the [Microsoft Next Generation Developer Relations Team](https://techcommunity.microsoft.com/t5/educator-developer-blog/bg-p/EducatorDeveloperBlog?WT.mc_id=academic-39457-leestott).
 
-The project is being validated through usage on the course [Higher Diploma in Cloud and Data Centre Administration](https://www.vtc.edu.hk/admission/en/programme/it114115-higher-diploma-in-cloud-and-data-centre-administration/)
+Project collaborators include, [Kwok,Hau Ling](https://www.linkedin.com/in/hau-ling-kwok-657b9624a/), [Lau Hing Pui](https://www.linkedin.com/in/leolaulhp/), and [Xu Yuan](https://www.linkedin.com/in/xu-yuan-flora/) from the IT114115 Higher Diploma in Cloud and Data Centre Administration.
 
 
 ## Microsoft Reactor - Getting started with Microsoft Azure Automatic Grading Engine
@@ -81,7 +80,7 @@ https://XXXXXX.azurewebsites.net/api/StudentRegistrationFunction?project=Assignm
 Note: 
 
 1. Subscription ID and Email must be unique for each assignment.
-2. Don't run <code>az ad sp create-for-rbac -n "AzureAutomaticGradingEngine" --role="Contributor" --scopes="/subscriptions/your-subscriptions-id"</code> repeatedly! Students need to submit the online form again with the new credentials.
+2. Don't run <code>az ad sp create-for-rbac -n "AzureAutomaticGradingEngine" --role="Contributor" --scopes="/subscriptions/your-subscriptions-id"</code> repeatedly! 
 
 ## Generate the Prebuilt package
 

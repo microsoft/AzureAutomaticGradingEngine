@@ -53,10 +53,10 @@ public static class StudentRegistrationFunction
         {
             log.LogInformation("POST Request");
             string lab = req.Form["lab"];
-            string email = req.Form["email"];            
+            string email = req.Form["email"];
             string credentialJsonString = req.Form["credentials"];
             log.LogInformation("Student Register: " + email + " Lab:" + lab);
-            if (string.IsNullOrWhiteSpace(email) ||               
+            if (string.IsNullOrWhiteSpace(email) ||
                 string.IsNullOrWhiteSpace(credentialJsonString))
                 return GetContentResult("Missing Data and Registration Failed!");
             email = email.Trim().ToLower();
@@ -67,8 +67,8 @@ public static class StudentRegistrationFunction
             var labCredentialDao = new LabCredentialDao(config, log);
             var credential = AppPrincipal.FromJson(credentialJsonString, log);
 
-            var AzureCredentials = SdkContext.AzureCredentialsFactory.FromServicePrincipal(credential.appId, credential.password, credential.tenant, AzureEnvironment.AzureGlobalCloud);
-            var authenticated = Microsoft.Azure.Management.Fluent.Azure.Configure().Authenticate(AzureCredentials);
+            var azureCredentials = SdkContext.AzureCredentialsFactory.FromServicePrincipal(credential.appId, credential.password, credential.tenant, AzureEnvironment.AzureGlobalCloud);
+            var authenticated = Microsoft.Azure.Management.Fluent.Azure.Configure().Authenticate(azureCredentials);
             string subscriptionId = authenticated.Subscriptions.List().First<ISubscription>().SubscriptionId;
 
             if (string.IsNullOrWhiteSpace(lab))

@@ -6,16 +6,16 @@
 		<ApplicationInsightsResourceId>/subscriptions/183966e3-8333-4764-9c74-a0eb4f883571/resourceGroups/azureautomaticgradingengine/providers/microsoft.insights/components/AzureAutomaticGradingEngineFunctionApp</ApplicationInsightsResourceId>
 	</PropertyGroup>
 	<ItemGroup>
-		<PackageReference Include="ClosedXML" Version="0.96.0" />
+		<PackageReference Include="ClosedXML" Version="0.102.1" />
 		<PackageReference Include="Cronos" Version="0.7.1" />
-		<PackageReference Include="Azure.Data.Tables" Version="12.6.1" />
+		<PackageReference Include="Azure.Data.Tables" Version="12.8.1" />
 		<PackageReference Include="Microsoft.Azure.Management.ContainerInstance.Fluent" Version="1.38.1" />
 		<PackageReference Include="Microsoft.Azure.Management.Fluent" Version="1.38.1" />
 		<PackageReference Include="Microsoft.Azure.Management.Msi.Fluent" Version="1.38.1" />
-		<PackageReference Include="Microsoft.Azure.WebJobs.Extensions.DurableTask" Version="2.8.0" />
-		<PackageReference Include="Microsoft.Azure.WebJobs.Extensions.Storage" Version="5.0.1" />
+		<PackageReference Include="Microsoft.Azure.WebJobs.Extensions.DurableTask" Version="2.11.1" />
+		<PackageReference Include="Microsoft.Azure.WebJobs.Extensions.Storage" Version="5.2.0" />
 		<PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="6.0.1" />
-		<PackageReference Include="Microsoft.NET.Sdk.Functions" Version="4.1.3" />
+		<PackageReference Include="Microsoft.NET.Sdk.Functions" Version="4.2.0" />
 	</ItemGroup>
 	<ItemGroup>
 		<Resource Include=".gitignore" />
